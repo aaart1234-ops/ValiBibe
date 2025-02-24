@@ -1,4 +1,6 @@
 # my_anki_app
+Подключиться с базе
+my_app % docker exec -it spaced_repetition_db psql -U postgres -d spaced_repetition_db
 
 
 
