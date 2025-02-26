@@ -2,6 +2,13 @@
 Подключиться с базе
 my_app % docker exec -it spaced_repetition_db psql -U postgres -d spaced_repetition_db
 
+Найти процесс, занимающий порт 8080, и завершить его
+lsof -i :8080
+Заверши процесс:
+kill -9 12345
+Теперь можно заново запустить сервер:
+go run cmd/main.go
+
 
 
 ## Getting started
