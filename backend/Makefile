@@ -17,7 +17,11 @@ logs:
 
 # Применяем миграции
 migrate:
-	docker exec backend_app migrate -path /app/migrations -database "postgres://postgres:password@postgres:5432/spaced_repetition_db?sslmode=disable" up
+	docker run --rm --network=host \
+		-v $(shell pwd)/migrations:/migrations \
+		migrate/migrate \
+		-path=/migrations \
+		-database "postgres://postgres:password@localhost:5432/spaced_repetition_db?sslmode=disable" up
 
 # Запускаем бэкенд без Docker
 run:
