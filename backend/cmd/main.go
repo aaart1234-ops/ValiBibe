@@ -7,6 +7,10 @@ import (
 
     "github.com/gin-gonic/gin"
 	"my_app_backend/internal/db"
+
+    "github.com/swaggo/gin-swagger"
+    "github.com/swaggo/files"
+    _ "my_app_backend/docs"
 )
 
 // Error handler func
@@ -38,6 +42,9 @@ func main() {
             // Если ошибки нет, отправляем стандартный ответ
     		c.JSON(http.StatusOK, gin.H{"message": "pong"})
     })
+
+    // Swagger UI доступен по адресу /swagger/index.html
+    router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
     // Launch server on 8080 port
     err := router.Run(":8080");
