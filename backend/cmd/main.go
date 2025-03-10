@@ -1,3 +1,9 @@
+// @title Simple Swagger Example
+// @version 1.0
+// @description Простейший пример API с Swagger
+// @host localhost:8080
+// @BasePath /
+
 package main
 
 import (
@@ -7,7 +13,6 @@ import (
 
     "github.com/gin-gonic/gin"
 	"my_app_backend/internal/db"
-
     "github.com/swaggo/gin-swagger"
     "github.com/swaggo/files"
     _ "my_app_backend/docs"
@@ -21,34 +26,40 @@ func handleError(c *gin.Context, statusCode int, message string) {
     })
 }
 
+// @Summary Проверка сервера
+// @ID ping
+// @Description Тестовый эндпоинт для проверки работы сервера
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /ping [get]
+func pingHandler(c *gin.Context) {
+    simulatedError := false
+    if simulatedError {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера"})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"message": "pong"})
+}
+
 func main() {
 	fmt.Println("🚀 Запуск приложения...")
 
 	// Подключаемся к базе данных
 	db.ConnectDB()
 
-	// Create new instance Gin
+	// Создаём новый экземпляр Gin
 	router := gin.Default()
 
-	// Add test endpoint
-	router.GET("/ping", func(c *gin.Context) {
-	    // Симулируем ошибку (например, если что-то пошло не так)
-	        simulatedError := false
-	        if simulatedError {
-	            handleError(c, http.StatusInternalServerError, "Ошибка сервера")
-	            return // Выходим из обработчика, чтобы не продолжать выполнение кода
-	        }
+	// Подключаем обработчик пинга
+	router.GET("/ping", pingHandler)
 
-            // Если ошибки нет, отправляем стандартный ответ
-    		c.JSON(http.StatusOK, gin.H{"message": "pong"})
-    })
+	// Swagger UI доступен по адресу /swagger/index.html
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-    // Swagger UI доступен по адресу /swagger/index.html
-    router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-    // Launch server on 8080 port
-    err := router.Run(":8080");
-    if err != nil {
-        log.Fatal("Ошибка запуска сервера: ", err);
-    }
+	// Запускаем сервер
+	if err := router.Run(":8080"); err != nil {
+		log.Fatal("Ошибка запуска сервера: ", err)
+	}
 }

@@ -46,4 +46,6 @@ my_app/
 │── docs/                 # Документация
 
 
+Инициализация доки swagger. Из папки backend/cmd:
+swag init -g main.go -o ../docs
 

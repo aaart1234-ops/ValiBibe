@@ -1,4 +1,31 @@
+basePath: /
+host: localhost:8080
 info:
   contact: {}
-paths: {}
+  description: Простейший пример API с Swagger
+  title: Simple Swagger Example
+  version: "1.0"
+paths:
+  /ping:
+    get:
+      description: Тестовый эндпоинт для проверки работы сервера
+      operationId: ping
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Проверка сервера
+      tags:
+      - health
 swagger: "2.0"
