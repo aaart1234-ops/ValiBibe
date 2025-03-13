@@ -1,18 +1,19 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// DB — глобальная переменная для хранения пула соединений с БД.
-var DB *pgxpool.Pool
+// DB — глобальная переменная для GORM
+var DB *gorm.DB
 
-// ConnectDB устанавливает соединение с базой данных.
+// ConnectDB устанавливает соединение с базой данных через GORM
 func ConnectDB() {
 	// Берем URL базы из переменной окружения
 	dsn := os.Getenv("DATABASE_URL")
@@ -20,23 +21,23 @@ func ConnectDB() {
 		log.Fatal("❌ DATABASE_URL не задан!")
 	}
 
-	// Парсим строку подключения
-	config, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		log.Fatalf("❌ Ошибка парсинга DSN: %v", err)
-	}
-
-	// Создаём пул соединений с БД
-	dbpool, err := pgxpool.NewWithConfig(context.Background(), config)
+	// Открываем соединение с БД
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn), // Логируем только предупреждения и ошибки
+	})
 	if err != nil {
 		log.Fatalf("❌ Ошибка подключения к БД: %v", err)
 	}
 
 	// Проверяем соединение
-	if err := dbpool.Ping(context.Background()); err != nil {
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("❌ Ошибка получения sql.DB: %v", err)
+	}
+	if err := sqlDB.Ping(); err != nil {
 		log.Fatalf("❌ Ошибка проверки соединения: %v", err)
 	}
 
-	fmt.Println("✅ Подключение к БД успешно!")
-	DB = dbpool
+	fmt.Println("✅ Подключение к БД через GORM успешно!")
+	DB = db
 }
