@@ -17,8 +17,10 @@ type User struct {
     SubscriptionStatus *string       `json:"subscription_status,omitempty"`
 }
 
-// BeforeCreate — хук GORM, который генерирует UUID перед созданием записи.
-func(u *User) BeforeCreate(tx *gorm.DB) (err error) {
-    u.ID = uuid.New()
-    return
+// BeforeCreate — хук GORM, который вызывается перед созданием записи
+func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return
 }

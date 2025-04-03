@@ -12,10 +12,13 @@ import (
     "net/http"
 
     "github.com/gin-gonic/gin"
-	"my_app_backend/internal/db"
     "github.com/swaggo/gin-swagger"
     "github.com/swaggo/files"
     _ "my_app_backend/docs"
+    "my_app_backend/internal/db"
+    "my_app_backend/internal/service"
+    "my_app_backend/internal/repository"
+    "my_app_backend/internal/controller"
 )
 
 // Error handler func
@@ -57,6 +60,25 @@ func main() {
 
 	// Swagger UI доступен по адресу /swagger/index.html
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Подключаем репозиторий пользователей
+    userRepo := repository.NewUserRepository(db.GetDB())
+
+    // Подключаем сервис токенов
+    tokenService := service.NewTokenService()
+
+    // Создаём сервис авторизации
+    authService := service.NewAuthService(userRepo, tokenService)
+
+	// 🔧 Создаём контроллер авторизации
+	authController := controller.NewAuthController(authService)
+
+	// 🚀 Добавляем маршруты авторизации
+    authRoutes := router.Group("/auth")
+    {
+        authRoutes.POST("/register", authController.RegisterUserHandler)
+        authRoutes.POST("/login", authController.LoginUserHandler)
+    }
 
 	// Запускаем сервер
 	if err := router.Run(":8080"); err != nil {

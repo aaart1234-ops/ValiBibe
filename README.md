@@ -2,6 +2,13 @@
 Подключиться с базе
 docker exec -it spaced_repetition_db psql -U postgres -d spaced_repetition_db
 
+Перезапуск контейнеров  
+docker-compose down && docker-compose up -d --build
+
+Запуск контейнеров с указанием пути к .env
+docker-compose --env-file ../.env up -d --build
+
+
 Найти процесс, занимающий порт 8080, и завершить его
 lsof -i :8080
 Заверши процесс:

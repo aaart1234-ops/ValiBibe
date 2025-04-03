@@ -5,11 +5,11 @@ DOCKER_COMPOSE = docker-compose -f ../docker/docker-compose.yml
 
 # Запускаем контейнеры
 up:
-	$(DOCKER_COMPOSE) up --build -d
+	$(DOCKER_COMPOSE) --env-file ../.env up --build -d
 
 # Останавливаем контейнеры
 down:
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) --env-file ../.env down
 
 # Показываем логи бэкенда
 logs:
