@@ -18,6 +18,16 @@ func NewAuthController(authService service.AuthService) *AuthController {
 }
 
 // RegisterUserHandler обрабатывает регистрацию пользователя
+// @Summary Регистрация пользователя
+// @Description Регистрирует нового пользователя по email, паролю и нику
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body models.RegisterRequest true "Данные для регистрации"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /auth/register [post]
 func (c *AuthController) RegisterUserHandler(ctx *gin.Context) {
     var request struct {
         Email string `json:"email"`
@@ -46,6 +56,16 @@ func (c *AuthController) RegisterUserHandler(ctx *gin.Context) {
 }
 
 // LoginUserHandler обрабатывает вход пользователя
+// @Summary Вход пользователя
+// @Description Аутентификация пользователя по email и паролю, возвращает JWT-токен
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body models.LoginRequest true "Данные для входа"
+// @Success 200 {object} map[string]interface{} "Успешный вход и токен"
+// @Failure 400 {object} map[string]string "Неверный формат запроса"
+// @Failure 401 {object} map[string]string "Неверный email или пароль"
+// @Router /auth/login [post]
 func (c *AuthController) LoginUserHandler(ctx *gin.Context) {
     var request struct {
         Email string `json:"email"`

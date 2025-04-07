@@ -17,6 +17,18 @@ type User struct {
     SubscriptionStatus *string       `json:"subscription_status,omitempty"`
 }
 
+type RegisterRequest struct {
+    Email    string `json:"email" example:"user@example.com"`
+    Password string `json:"password" example:"123456"`
+    Nickname string `json:"nickname" example:"CoolUser"`
+}
+
+// LoginRequest - модель запроса для входа
+type LoginRequest struct {
+    Email    string `json:"email" example:"user@example.com"`
+    Password string `json:"password" example:"123456"`
+}
+
 // BeforeCreate — хук GORM, который вызывается перед созданием записи
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if u.ID == uuid.Nil {

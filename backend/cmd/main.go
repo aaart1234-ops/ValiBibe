@@ -1,6 +1,6 @@
 // @title Simple Swagger Example
 // @version 1.0
-// @description Простейший пример API с Swagger
+// @description backend API для проекта
 // @host localhost:8080
 // @BasePath /
 

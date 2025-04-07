@@ -55,4 +55,6 @@ my_app/
 
 Инициализация доки swagger. Из папки backend/cmd:
 swag init -g main.go -o ../docs
+backend % swag init -g main.go -o ../docs --dir .,../internal/controller,../internal/models
+
 
