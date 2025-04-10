@@ -1,4 +1,3 @@
-basePath: /
 definitions:
   models.LoginRequest:
     properties:
@@ -21,10 +20,21 @@ definitions:
         example: "123456"
         type: string
     type: object
-host: localhost:8080
+  models.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      nickname:
+        type: string
+      subscription_status:
+        type: string
+    type: object
 info:
   contact: {}
-  description: Простейший пример API с Swagger
   title: Simple Swagger Example
   version: "1.0"
 paths:
@@ -61,6 +71,33 @@ paths:
               type: string
             type: object
       summary: Вход пользователя
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Возвращает данные пользователя на основе JWT-токена
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить текущего пользователя
       tags:
       - auth
   /auth/register:
@@ -120,4 +157,10 @@ paths:
       summary: Проверка сервера
       tags:
       - health
+securityDefinitions:
+  BearerAuth:
+    description: backend API для проекта
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

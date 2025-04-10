@@ -18,6 +18,7 @@ var DB *gorm.DB
 // ConnectDB устанавливает соединение с базой данных
 func ConnectDB() {
 	dsn := os.Getenv("DATABASE_URL")
+	fmt.Println("DSN:", dsn)
 	if dsn == "" {
 		log.Fatal("❌ DATABASE_URL не задан!")
 	}

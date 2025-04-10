@@ -1,6 +1,7 @@
 package controller
 
 import (
+    "fmt"
     "net/http"
 
 	"github.com/gin-gonic/gin"
@@ -91,6 +92,54 @@ func (c *AuthController) LoginUserHandler(ctx *gin.Context) {
         "token":   token,
     })
 }
+
+// MeHandler возвращает информацию о текущем пользователе
+// @Summary Получить текущего пользователя
+// @Description Возвращает данные пользователя на основе JWT-токена
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /auth/me [get]
+func (c *AuthController) MeHandler(ctx *gin.Context) {
+    fmt.Println("🔍 MeHandler вызывается") // 👈 сюда
+
+    userID, exists := ctx.Get("user_id")
+    if !exists {
+        fmt.Println("⛔️ user_id не найден в context")
+        ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+        return
+    }
+
+    fmt.Println("✅ user_id:", userID)
+
+    user, err := c.authService.GetUserByID(userID.(string))
+    if err != nil {
+        fmt.Println("⛔️ Ошибка при получении пользователя:", err)
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить пользователя"})
+        return
+    }
+
+    fmt.Println("📤 Отправляем данные пользователя:", user)
+    ctx.JSON(http.StatusOK, user)
+}
+
+// LogoutHandler обрабатывает выход пользователя
+// @Summary Выход из системы
+// @Description Инвалидирует токен на клиенте (сервер токены не хранит)
+// @Tags auth
+// @Security BearerAuth
+// @Success 200 {object} map[string]string
+// @Router /auth/logout [post]
+// LogoutHandler обрабатывает выход пользователя
+func (ac *AuthController) LogoutHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "✅ Вы вышли из системы"})
+}
+
+
+
 
 
 

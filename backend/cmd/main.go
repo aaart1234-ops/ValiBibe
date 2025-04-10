@@ -1,5 +1,8 @@
 // @title Simple Swagger Example
 // @version 1.0
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 // @description backend API для проекта
 // @host localhost:8080
 // @BasePath /
@@ -19,6 +22,7 @@ import (
     "my_app_backend/internal/service"
     "my_app_backend/internal/repository"
     "my_app_backend/internal/controller"
+    "my_app_backend/internal/middleware"
 )
 
 // Error handler func
@@ -51,7 +55,7 @@ func main() {
 
 	// Подключаемся к базе данных
 	db.ConnectDB()
-
+    fmt.Println("DB is nil?", db.GetDB() == nil)
 	// Создаём новый экземпляр Gin
 	router := gin.Default()
 
@@ -68,7 +72,7 @@ func main() {
     tokenService := service.NewTokenService()
 
     // Создаём сервис авторизации
-    authService := service.NewAuthService(userRepo, tokenService)
+    authService := service.NewAuthService(userRepo, tokenService, db.GetDB())
 
 	// 🔧 Создаём контроллер авторизации
 	authController := controller.NewAuthController(authService)
@@ -78,6 +82,8 @@ func main() {
     {
         authRoutes.POST("/register", authController.RegisterUserHandler)
         authRoutes.POST("/login", authController.LoginUserHandler)
+        authRoutes.GET("/me", middleware.AuthMiddleware(tokenService), authController.MeHandler)
+        authRoutes.POST("/logout", middleware.AuthMiddleware(tokenService), authController.LogoutHandler)
     }
 
 	// Запускаем сервер
