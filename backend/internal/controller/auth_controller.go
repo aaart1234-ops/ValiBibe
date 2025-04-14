@@ -97,6 +97,7 @@ func (c *AuthController) LoginUserHandler(ctx *gin.Context) {
 // @Summary Получить текущего пользователя
 // @Description Возвращает данные пользователя на основе JWT-токена
 // @Tags auth
+// @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} models.User

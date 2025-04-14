@@ -18,14 +18,14 @@ type User struct {
 }
 
 type RegisterRequest struct {
-    Email    string `json:"email" example:"user@example.com"`
+    Email    string `json:"email" example:"test@example.com"`
     Password string `json:"password" example:"123456"`
     Nickname string `json:"nickname" example:"CoolUser"`
 }
 
 // LoginRequest - модель запроса для входа
 type LoginRequest struct {
-    Email    string `json:"email" example:"user@example.com"`
+    Email    string `json:"email" example:"test@example.com"`
     Password string `json:"password" example:"123456"`
 }
 

@@ -73,6 +73,21 @@ paths:
       summary: Вход пользователя
       tags:
       - auth
+  /auth/logout:
+    post:
+      description: Инвалидирует токен на клиенте (сервер токены не хранит)
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Выход из системы
+      tags:
+      - auth
   /auth/me:
     get:
       description: Возвращает данные пользователя на основе JWT-токена
@@ -135,28 +150,6 @@ paths:
       summary: Регистрация пользователя
       tags:
       - auth
-  /ping:
-    get:
-      description: Тестовый эндпоинт для проверки работы сервера
-      operationId: ping
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Проверка сервера
-      tags:
-      - health
 securityDefinitions:
   BearerAuth:
     description: backend API для проекта
