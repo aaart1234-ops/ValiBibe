@@ -56,4 +56,7 @@ my_app/
 Инициализация доки swagger. Из папки backend:
 swag init -g cmd/main.go -o docs
 
+Запуск тестов из папки backend:
+go test -v ./tests/...
+
 
