@@ -1,4 +1,4 @@
-package service_tests
+package unit
 
 import (
     "os"

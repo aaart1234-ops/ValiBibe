@@ -20,7 +20,7 @@ func InitializeApp() (*gin.Engine, error) {
 
 	// Сервисы
 	tokenService := service.NewTokenService()
-	authService := service.NewAuthService(userRepo, tokenService, database)
+	authService := service.NewAuthService(userRepo, tokenService)
 
 	// Контроллеры
 	authController := controller.NewAuthController(authService)

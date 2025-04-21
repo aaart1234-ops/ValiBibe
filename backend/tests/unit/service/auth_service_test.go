@@ -1,4 +1,4 @@
-package service_tests
+package unit
 
 import (
     "errors"
@@ -61,7 +61,7 @@ func TestRegisterUser_Success(t *testing.T) {
 	mockRepo := new(MockUserRepo)
 	mockToken := new(MockTokenService)
 
-	authService := service.NewAuthService(mockRepo, mockToken, &gorm.DB{})
+	authService := service.NewAuthService(mockRepo, mockToken)
 
 	email := "test@example.com"
 	nickname := "TestUser"
@@ -81,7 +81,7 @@ func TestRegisterUser_Success(t *testing.T) {
 func TestLoginUser_Success(t *testing.T) {
 	mockRepo := new(MockUserRepo)
 	mockToken := new(MockTokenService)
-	authService := service.NewAuthService(mockRepo, mockToken, &gorm.DB{})
+	authService := service.NewAuthService(mockRepo, mockToken)
 
 	email := "test@example.com"
 	password := "securepassword"
@@ -108,7 +108,7 @@ func TestLoginUser_Success(t *testing.T) {
 func TestLoginUser_WrongEmail(t *testing.T) {
 	mockRepo := new(MockUserRepo)
 	mockToken := new(MockTokenService)
-	authService := service.NewAuthService(mockRepo, mockToken, &gorm.DB{})
+	authService := service.NewAuthService(mockRepo, mockToken)
 
 	email := "wrong@example.com"
 	password := "password"
@@ -126,7 +126,7 @@ func TestLoginUser_WrongEmail(t *testing.T) {
 func TestLoginUser_WrongPassword(t *testing.T) {
 	mockRepo := new(MockUserRepo)
 	mockToken := new(MockTokenService)
-	authService := service.NewAuthService(mockRepo, mockToken, &gorm.DB{})
+	authService := service.NewAuthService(mockRepo, mockToken)
 
 	email := "test@example.com"
 	password := "wrongpassword"
@@ -149,21 +149,45 @@ func TestLoginUser_WrongPassword(t *testing.T) {
 }
 
 func TestGetUserByID_Success(t *testing.T) {
-	// создаем пользователя
-	//userID := uuid.New()
-	/*user := models.User{
-		ID:       userID,
-		Email:    "user@example.com",
-		Nickname: "User",
-	}*/
+    mockRepo := new(MockUserRepo)
+    mockToken := new(MockTokenService)
+    authService := service.NewAuthService(mockRepo, mockToken)
 
-	// мок GORM DB
-	//mockDB := &gorm.DB{
-		// Обычный gorm.DB нельзя замокать напрямую, тут лучше использовать SQLite in-memory или gormmock
-		// или обернуть DB слой в интерфейс и мокать его.
-	//}
+    userID := uuid.New().String()
+    expectedUser := &models.User{
+        ID:       uuid.MustParse(userID),
+        Email:    "test@example.com",
+        Nickname: "Tester",
+    }
 
-	// Временно просто пропустим этот тест, или можно сделать integration test с SQLite
+    mockRepo.On("GetUserByID", userID).Return(expectedUser, nil)
 
-	t.Skip("Тест требует мок или SQLite in-memory")
+    user, err := authService.GetUserByID(userID)
+
+    assert.NoError(t, err)
+    assert.NotNil(t, user)
+    assert.Equal(t, expectedUser.Email, user.Email)
+    assert.Equal(t, expectedUser.Nickname, user.Nickname)
+
+    mockRepo.AssertExpectations(t)
 }
+
+func TestGetUserByID_NotFound(t *testing.T) {
+	mockRepo := new(MockUserRepo)
+	mockToken := new(MockTokenService)
+	authService := service.NewAuthService(mockRepo, mockToken)
+
+	userID := uuid.New().String()
+
+	// Предположим, репозиторий вернет gorm.ErrRecordNotFound
+	mockRepo.On("GetUserByID", userID).Return(nil, gorm.ErrRecordNotFound)
+
+	user, err := authService.GetUserByID(userID)
+
+	assert.Error(t, err)
+	assert.Nil(t, user)
+	assert.Equal(t, gorm.ErrRecordNotFound, err)
+
+	mockRepo.AssertExpectations(t)
+}
+

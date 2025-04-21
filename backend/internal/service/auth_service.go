@@ -21,12 +21,11 @@ type AuthService interface {
 type authService struct {
     userRepo repository.UserRepository
     tokenService TokenService
-    db *gorm.DB
 }
 
 // NewAuthService создает новый сервис аутентификации
-func NewAuthService(userRepo repository.UserRepository, tokenService TokenService, db *gorm.DB) AuthService {
-    return &authService{userRepo: userRepo, tokenService: tokenService, db: db}
+func NewAuthService(userRepo repository.UserRepository, tokenService TokenService) AuthService {
+    return &authService{userRepo: userRepo, tokenService: tokenService}
 }
 
 // RegisterUser регистрирует нового пользователя
@@ -85,9 +84,5 @@ func (s *authService) LoginUser(email, password string) (string, error) {
 
 // Получает пользователя по ID
 func (s *authService) GetUserByID(userID string) (*models.User, error) {
-    var user models.User
-    if err := s.db.First(&user, "id = ?", userID).Error; err != nil {
-        return nil, err
-    }
-    return &user, nil
+    return s.userRepo.GetUserByID(userID)
 }

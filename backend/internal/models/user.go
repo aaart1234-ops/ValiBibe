@@ -9,7 +9,7 @@ import (
 
 // User представляет модель пользователя в базе данных.
 type User struct {
-    ID                uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
+    ID                uuid.UUID      `gorm:"type:text;primaryKey" json:"id"`
     Nickname          string         `gorm:"not null" json:"nickname"`
     Email             string         `gorm:"unique;not null" json:"email"`
     PasswordHash      string         `gorm:"not null" json:"-"`
