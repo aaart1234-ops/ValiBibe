@@ -5,27 +5,10 @@ import (
 
     "github.com/google/uuid"
     "github.com/stretchr/testify/assert"
-    "gorm.io/driver/sqlite"
-    "gorm.io/gorm"
 
     "my_app_backend/internal/models"
     "my_app_backend/internal/repository"
 )
-
-func setupTestDB(t *testing.T) *gorm.DB {
-    db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-    if err != nil {
-        t.Fatalf("failed to connect to test database: %v", err)
-    }
-
-    // Прогоняем миграции
-    err = db.AutoMigrate(&models.User{})
-    if err != nil {
-        t.Fatalf("failed to migrate test database: %v", err)
-    }
-
-    return db
-}
 
 func TestUserRepository_CreateAndGetUserByID(t *testing.T) {
     db := setupTestDB(t)
