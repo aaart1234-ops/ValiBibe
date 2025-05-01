@@ -2,6 +2,11 @@
 Подключиться с базе
 docker exec -it spaced_repetition_db psql -U postgres -d spaced_repetition_db
 
+или к системной базе так
+docker exec -it spaced_repetition_db psql -U postgres -d postgres
+Посмотри список баз данных:
+\l
+
 Перезапуск контейнеров  
 docker-compose down && docker-compose up -d --build
 
@@ -20,9 +25,11 @@ go run cmd/main.go
 make logs
 Применение миграций:
 make migrate
-Запуск контейнеров
+Создать миграцию:
+make create-migration NAME=create_notes_table
+Запуск контейнеров:
 make up
-Остановка контейнеров
+Остановка контейнеров:
 make down
 
 После успешного запуска можно проверить доступность сервера командой:

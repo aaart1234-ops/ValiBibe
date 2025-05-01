@@ -5,6 +5,8 @@ import (
 
     "github.com/google/uuid"
     "gorm.io/gorm"
+
+    "my_app_backend/internal/utils"
 )
 
 // User представляет модель пользователя в базе данных.
@@ -31,8 +33,5 @@ type LoginRequest struct {
 
 // BeforeCreate — хук GORM, который вызывается перед созданием записи
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
-	if u.ID == uuid.Nil {
-		u.ID = uuid.New()
-	}
-	return
+    return utils.SetUUIDIfNil(&u.ID)(tx)
 }
