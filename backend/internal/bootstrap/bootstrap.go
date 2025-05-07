@@ -17,6 +17,7 @@ func InitializeApp() (*gin.Engine, error) {
 
 	// Репозитории
 	userRepo := repository.NewUserRepository(database)
+	//noteRepo := repository.NewNoteRepository(database)
 
 	// Сервисы
 	tokenService := service.NewTokenService()

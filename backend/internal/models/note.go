@@ -18,7 +18,7 @@ type Note struct {
     Archived     bool       `gorm:"default:false" json:"archived"`
     NextReviewAt *time.Time `json:"next_review_at, omitempty"`
     CreatedAt    *time.Time `gorm:"autoCreateTime" json:"created_at"`
-    UpdatedAy    *time.Time `gorm:"autoCreateTime" json:"updated_at"`
+    UpdatedAt    *time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (n *Note) BeforeCreate(tx *gorm.DB) (err error) {
