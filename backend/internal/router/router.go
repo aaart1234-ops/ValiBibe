@@ -11,7 +11,11 @@ import (
 	"my_app_backend/internal/service"
 )
 
-func SetupRoutes(r *gin.Engine, tokenService service.TokenService, authController *controller.AuthController) {
+func SetupRoutes(r *gin.Engine,
+                    tokenService service.TokenService,
+                    authController *controller.AuthController,
+                    noteController *controller.NoteController,
+                ) {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -64,4 +68,16 @@ func SetupRoutes(r *gin.Engine, tokenService service.TokenService, authControlle
 		auth.GET("/me", middleware.AuthMiddleware(tokenService), authController.MeHandler)
 		auth.POST("/logout", middleware.AuthMiddleware(tokenService), authController.LogoutHandler)
 	}
+
+    // Notes
+    notes := r.Group("/notes")
+    notes.Use(middleware.AuthMiddleware(tokenService))
+    {
+        notes.POST("/", noteController.CreateNote)
+        notes.GET("/", noteController.GetAllNotes)
+        notes.GET("/:id", noteController.GetNoteByID)
+        notes.PUT("/:id", noteController.UpdateNote)
+        notes.DELETE("/:id", noteController.DeleteNote)
+        notes.POST("/:id/archive", noteController.ArchiveNote)
+    }
 }

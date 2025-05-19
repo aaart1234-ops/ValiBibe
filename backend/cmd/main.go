@@ -23,7 +23,7 @@ func main() {
 		log.Fatal("❌ Ошибка инициализации: ", err)
 	}
 
-	if err := app.Run(":8080"); err != nil {
+	if err := app.Run(":8181"); err != nil {
 		log.Fatal("❌ Ошибка запуска сервера: ", err)
 	}
 }

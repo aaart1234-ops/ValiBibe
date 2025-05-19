@@ -17,20 +17,22 @@ func InitializeApp() (*gin.Engine, error) {
 
 	// Репозитории
 	userRepo := repository.NewUserRepository(database)
-	//noteRepo := repository.NewNoteRepository(database)
+	noteRepo := repository.NewNoteRepository(database)
 
 	// Сервисы
 	tokenService := service.NewTokenService()
 	authService := service.NewAuthService(userRepo, tokenService)
+	noteService := service.NewNoteService(noteRepo)
 
 	// Контроллеры
 	authController := controller.NewAuthController(authService)
+	noteController := controller.NewNoteController(noteService)
 
 	// Инициализация Gin
 	engine := gin.Default()
 
 	// Роутинг
-	router.SetupRoutes(engine, tokenService, authController)
+	router.SetupRoutes(engine, tokenService, authController, noteController)
 
 	return engine, nil
 }

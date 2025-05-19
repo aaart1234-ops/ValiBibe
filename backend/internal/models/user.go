@@ -15,7 +15,7 @@ type User struct {
     Nickname          string         `gorm:"not null" json:"nickname"`
     Email             string         `gorm:"unique;not null" json:"email"`
     PasswordHash      string         `gorm:"not null" json:"-"`
-    CreatedAt         time.Time      `gorm:"default:current_timestamp" json:"created_at"`
+    CreatedAt         time.Time      `gorm:"autoCreateTime" json:"created_at"`
     SubscriptionStatus *string       `json:"subscription_status,omitempty"`
 }
 

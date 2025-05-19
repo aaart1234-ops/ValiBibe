@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
-
 	"my_app_backend/internal/models"
 )
 

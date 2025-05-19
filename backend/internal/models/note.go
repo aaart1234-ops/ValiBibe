@@ -17,8 +17,8 @@ type Note struct {
     MemoryLevel  int        `gorm:"type:int;default:0;check:memory_level >= 0 AND memory_level <= 100" json:"memory_level"`
     Archived     bool       `gorm:"default:false" json:"archived"`
     NextReviewAt *time.Time `json:"next_review_at, omitempty"`
-    CreatedAt    *time.Time `gorm:"autoCreateTime" json:"created_at"`
-    UpdatedAt    *time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+    CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at"`
+    UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 }
 
 func (n *Note) BeforeCreate(tx *gorm.DB) (err error) {

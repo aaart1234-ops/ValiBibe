@@ -37,29 +37,6 @@ curl http://localhost:8080/ping
 Если сервер работает, вы получите ответ:
 {"message": "pong"}
 
-
-
-Структура проекта
-
-my_app/
-│── backend/              # Исходный код backend-сервиса
-│   ├── cmd/              # Точка входа в приложение (main.go)
-│   ├── internal/         # Внутренние пакеты
-│   │   ├── db/           # Работа с базой данных
-│   │   ├── handlers/     # HTTP-обработчики
-│   │   ├── models/       # Описание структур данных
-│   ├── migrations/       # Файлы миграций для БД
-│   ├── pkg/              # Пакеты с вспомогательными функциями
-│   ├── tests/            # Тесты для backend
-│   ├── Dockerfile        # Docker-образ для backend
-│   ├── go.mod            # Зависимости Go
-│   ├── go.sum            # Контрольные суммы зависимостей
-│── frontend/             # Исходный код frontend (React)
-│── docker/               # Конфигурация контейнеров
-│   ├── docker-compose.yml # Определение сервисов (PostgreSQL + backend)
-│── docs/                 # Документация
-
-
 Инициализация доки swagger. Из папки backend:
 swag init -g cmd/main.go -o docs
 
