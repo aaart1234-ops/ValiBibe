@@ -2,16 +2,49 @@ definitions:
   models.LoginRequest:
     properties:
       email:
-        example: user@example.com
+        example: test@example.com
         type: string
       password:
         example: "123456"
         type: string
     type: object
+  models.Note:
+    properties:
+      archived:
+        type: boolean
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      memoryLevel:
+        type: integer
+      next_review_at:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.NoteInput:
+    properties:
+      content:
+        type: string
+      title:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - content
+    - title
+    type: object
   models.RegisterRequest:
     properties:
       email:
-        example: user@example.com
+        example: test@example.com
         type: string
       nickname:
         example: CoolUser
@@ -19,6 +52,11 @@ definitions:
       password:
         example: "123456"
         type: string
+    type: object
+  models.ReviewInput:
+    properties:
+      remembered:
+        type: boolean
     type: object
   models.User:
     properties:
@@ -90,6 +128,8 @@ paths:
       - auth
   /auth/me:
     get:
+      consumes:
+      - application/json
       description: Возвращает данные пользователя на основе JWT-токена
       produces:
       - application/json
@@ -150,6 +190,220 @@ paths:
       summary: Регистрация пользователя
       tags:
       - auth
+  /notes:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Note'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить все заметки пользователя
+      tags:
+      - notes
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные заметки
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/models.NoteInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать новую заметку
+      tags:
+      - notes
+  /notes/{id}:
+    delete:
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить заметку
+      tags:
+      - notes
+    get:
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить заметку по ID
+      tags:
+      - notes
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Обновлённые данные заметки
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/models.NoteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить заметку
+      tags:
+      - notes
+  /notes/{id}/archive:
+    post:
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Архивировать заметку
+      tags:
+      - notes
+  /notes/{id}/review:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Вспомнил или нет
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReviewInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Note'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить память (review) по заметке
+      tags:
+      - notes
 securityDefinitions:
   BearerAuth:
     description: backend API для проекта

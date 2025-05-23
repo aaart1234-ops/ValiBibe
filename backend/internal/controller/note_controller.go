@@ -16,6 +16,17 @@ func NewNoteController(noteService *service.NoteService) *NoteController {
     return &NoteController{noteService: noteService}
 }
 
+// CreateNote godoc
+// @Summary Создать новую заметку
+// @Tags notes
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param note body models.NoteInput true "Данные заметки"
+// @Success 201 {object} models.Note
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /notes [post]
 func (c *NoteController) CreateNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
 
@@ -34,6 +45,15 @@ func (c *NoteController) CreateNote(ctx *gin.Context) {
     ctx.JSON(http.StatusCreated, note)
 }
 
+// GetNoteByID godoc
+// @Summary Получить заметку по ID
+// @Tags notes
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Note ID"
+// @Success 200 {object} models.Note
+// @Failure 404 {object} map[string]string
+// @Router /notes/{id} [get]
 func (c *NoteController) GetNoteByID(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
@@ -47,6 +67,14 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, note)
 }
 
+// GetAllNotes godoc
+// @Summary Получить все заметки пользователя
+// @Tags notes
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} models.Note
+// @Failure 500 {object} map[string]string
+// @Router /notes [get]
 func (c *NoteController) GetAllNotes(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
 
@@ -59,6 +87,18 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, notes)
 }
 
+// UpdateNote godoc
+// @Summary Обновить заметку
+// @Tags notes
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Note ID"
+// @Param note body models.NoteInput true "Обновлённые данные заметки"
+// @Success 200 {object} models.Note
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /notes/{id} [put]
 func (c *NoteController) UpdateNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
@@ -78,6 +118,15 @@ func (c *NoteController) UpdateNote(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, note)
 }
 
+// ArchiveNote godoc
+// @Summary Архивировать заметку
+// @Tags notes
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Note ID"
+// @Success 200 {object} models.Note
+// @Failure 500 {object} map[string]string
+// @Router /notes/{id}/archive [post]
 func (c *NoteController) ArchiveNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
@@ -91,6 +140,15 @@ func (c *NoteController) ArchiveNote(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, updatedNote)  // Возвращаем саму заметку
 }
 
+// DeleteNote godoc
+// @Summary Удалить заметку
+// @Tags notes
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Note ID"
+// @Success 200 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /notes/{id} [delete]
 func (c *NoteController) DeleteNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
@@ -104,6 +162,18 @@ func (c *NoteController) DeleteNote(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, gin.H{"message": "Note deleted"})
 }
 
+// ReviewNoteHandler godoc
+// @Summary Обновить память (review) по заметке
+// @Tags notes
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Note ID"
+// @Param input body models.ReviewInput true "Вспомнил или нет"
+// @Success 200 {object} models.Note
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /notes/{id}/review [post]
 func (c *NoteController) ReviewNoteHandler(ctx *gin.Context) {
 	userID := ctx.GetString("user_id")
 	noteID := ctx.Param("id")
