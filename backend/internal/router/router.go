@@ -73,11 +73,12 @@ func SetupRoutes(r *gin.Engine,
     notes := r.Group("/notes")
     notes.Use(middleware.AuthMiddleware(tokenService))
     {
-        notes.POST("/", noteController.CreateNote)
-        notes.GET("/", noteController.GetAllNotes)
+        notes.POST("", noteController.CreateNote)
+        notes.GET("", noteController.GetAllNotes)
         notes.GET("/:id", noteController.GetNoteByID)
         notes.PUT("/:id", noteController.UpdateNote)
         notes.DELETE("/:id", noteController.DeleteNote)
         notes.POST("/:id/archive", noteController.ArchiveNote)
+        notes.POST("/:id/review", noteController.ReviewNoteHandler)
     }
 }

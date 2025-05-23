@@ -17,7 +17,7 @@ func NewNoteController(noteService *service.NoteService) *NoteController {
 }
 
 func (c *NoteController) CreateNote(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
 
     var input models.NoteInput
     if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -35,7 +35,7 @@ func (c *NoteController) CreateNote(ctx *gin.Context) {
 }
 
 func (c *NoteController) GetNoteByID(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
 
     note, err := c.noteService.GetNoteByID(ctx, userID, id)
@@ -48,7 +48,7 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 }
 
 func (c *NoteController) GetAllNotes(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
 
     notes, err := c.noteService.GetAllNotesByUserID(ctx, userID)
     if err != nil {
@@ -60,7 +60,7 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
 }
 
 func (c *NoteController) UpdateNote(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
 
     var input models.NoteInput
@@ -79,20 +79,20 @@ func (c *NoteController) UpdateNote(ctx *gin.Context) {
 }
 
 func (c *NoteController) ArchiveNote(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
 
-    err := c.noteService.ArchiveNote(ctx, userID, id)
+    updatedNote, err := c.noteService.ArchiveNote(ctx, userID, id)  // Теперь возвращает (*models.Note, error)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    ctx.JSON(http.StatusOK, gin.H{"message": "Note archived"})
+    ctx.JSON(http.StatusOK, updatedNote)  // Возвращаем саму заметку
 }
 
 func (c *NoteController) DeleteNote(ctx *gin.Context) {
-    userID := ctx.MustGet("userID").(string)
+    userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
 
     err := c.noteService.DeleteNote(ctx, userID, id)
@@ -102,4 +102,30 @@ func (c *NoteController) DeleteNote(ctx *gin.Context) {
     }
 
     ctx.JSON(http.StatusOK, gin.H{"message": "Note deleted"})
+}
+
+func (c *NoteController) ReviewNoteHandler(ctx *gin.Context) {
+	userID := ctx.GetString("user_id")
+	noteID := ctx.Param("id")
+
+	var input models.ReviewInput
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err := c.noteService.UpdateMemoryLevel(ctx, userID, noteID, input.Remembered)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+    // Получаем обновлённую заметку и возвращаем её
+    updatedNote, err := c.noteService.GetNoteByID(ctx, userID, noteID)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch updated note"})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, updatedNote) // Теперь в ответе всегда будет memoryLevel (0 или увеличенный)
 }

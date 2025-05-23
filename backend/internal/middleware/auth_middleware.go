@@ -57,7 +57,7 @@ func AuthMiddleware(tokenService service.TokenService) gin.HandlerFunc {
         }
 
         fmt.Println("✅ Авторизация прошла, user_id:", userIDStr)
-        c.Set("userID", userIDStr)
+        c.Set("user_id", userIDStr)
         c.Next()
     }
 }

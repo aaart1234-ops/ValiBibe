@@ -4,7 +4,7 @@
 // @in header
 // @name Authorization
 // @description backend API для проекта
-// @host localhost:8080
+// @host localhost:8181
 // @BasePath /
 
 package main
@@ -23,7 +23,7 @@ func main() {
 		log.Fatal("❌ Ошибка инициализации: ", err)
 	}
 
-	if err := app.Run(":8181"); err != nil {
+	if err := app.Run(":8081"); err != nil {
 		log.Fatal("❌ Ошибка запуска сервера: ", err)
 	}
 }

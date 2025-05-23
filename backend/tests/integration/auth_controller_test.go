@@ -27,9 +27,12 @@ func setupAuthControllerTestRouter(t *testing.T) *gin.Engine {
     tokenService := service.NewTokenService()
     authService := service.NewAuthService(userRepo, tokenService)
     authController := controller.NewAuthController(authService)
+	noteRepo := repository.NewNoteRepository(db)
+	noteService := service.NewNoteService(noteRepo)
+	noteController := controller.NewNoteController(noteService)
 
     r := gin.Default()
-    router.SetupRoutes(r, tokenService, authController)
+    router.SetupRoutes(r, tokenService, authController, noteController)
 
     return r
 }

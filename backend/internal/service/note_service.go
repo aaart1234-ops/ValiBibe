@@ -1,6 +1,7 @@
 package service
 
 import (
+    "fmt"
     "context"
     "errors"
     "time"
@@ -37,10 +38,22 @@ func (s *NoteService) UpdateMemoryLevel(ctx context.Context, userID, noteID stri
         if note.MemoryLevel > 100 {
             note.MemoryLevel = 100
         }
-        note.NextReviewAt = calcNextReviewAt(note.MemoryLevel)
+        nextReview := calcNextReviewAt(note.MemoryLevel)
+        fmt.Printf("Calculated next review: %v\n", nextReview) // Логирование
+        note.NextReviewAt = nextReview
     }
 
-    return s.noteRepo.UpdateNote(ctx, note)
+    err = s.noteRepo.UpdateNote(ctx, note)
+    if err != nil {
+        return err
+    }
+
+    // Проверяем, что сохранилось в БД
+    updatedNote, _ := s.noteRepo.GetNoteByID(ctx, noteID)
+    fmt.Printf("Saved in DB - MemoryLevel: %d, NextReviewAt: %v\n",
+        updatedNote.MemoryLevel, updatedNote.NextReviewAt)
+
+    return nil
 }
 
 // Примерная логика: чем выше уровень, тем дольше до следующего повторения
@@ -122,19 +135,24 @@ func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID string, inp
     return note, nil
 }
 
-func (s *NoteService) ArchiveNote(ctx context.Context, userID, noteID string) error {
+func (s *NoteService) ArchiveNote(ctx context.Context, userID, noteID string) (*models.Note, error) {
     note, err := s.noteRepo.GetNoteByID(ctx, noteID)
     if err != nil {
-        return err
+            return nil, err
     }
 
     if note == nil || note.UserID.String() != userID {
-        return errors.New("note not found or access denied")
+        return nil, errors.New("note not found or access denied")
     }
 
     note.Archived = true
 
-    return s.noteRepo.UpdateNote(ctx, note)
+    err = s.noteRepo.UpdateNote(ctx, note)
+    if err != nil {
+        return nil, err
+    }
+
+    return note, nil  // Возвращаем обновлённую заметку
 }
 
 func (s *NoteService) DeleteNote(ctx context.Context, userID, noteID string) error {
