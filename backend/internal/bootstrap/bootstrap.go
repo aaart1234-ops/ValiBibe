@@ -7,6 +7,7 @@ import (
 	"my_app_backend/internal/service"
 	"my_app_backend/internal/controller"
 	"my_app_backend/internal/router"
+	"my_app_backend/internal/middleware"
 	_ "my_app_backend/docs"
 )
 
@@ -30,7 +31,7 @@ func InitializeApp() (*gin.Engine, error) {
 
 	// Инициализация Gin
 	engine := gin.Default()
-
+    engine.Use(middleware.CORSMiddleware())
 	// Роутинг
 	router.SetupRoutes(engine, tokenService, authController, noteController)
 
