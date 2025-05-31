@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TextField, Button, Box, Typography, Alert } from '@mui/material'
 import { useLoginMutation } from '../authApi'
 import { useAppDispatch } from '@/app/hooks'
@@ -16,8 +16,27 @@ const LoginForm = () => {
     // Ошибки валидации
     const [emailError, setEmailError] = useState('')
     const [passwordError, setPasswordError] = useState('')
+    const [generalError, setGeneralError] = useState('')
 
     const [login, { isLoading, error }] = useLoginMutation()
+
+    // Обработка ошибок от API
+    useEffect(() => {
+        if (!error) return
+
+        // Очистим старые ошибки
+        setEmailError('')
+        setPasswordError('')
+        setGeneralError('')
+
+        if ('status' in error) {
+            if (error.status === 401) {
+                setGeneralError('Неверный email или пароль')
+            } else {
+                setGeneralError('Произошла ошибка. Попробуйте ещё раз.')
+            }
+        }
+    }, [error])
 
     // Валидация email
     const validateEmail = () => {
@@ -78,6 +97,12 @@ const LoginForm = () => {
             <Typography variant="h5" mb={2}>
                 Вход в аккаунт
             </Typography>
+
+            {generalError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                    {generalError}
+                </Alert>
+            )}
 
             <TextField
                 label="Email"
