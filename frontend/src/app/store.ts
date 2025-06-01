@@ -14,10 +14,18 @@ export const store = configureStore({
 
 // Попытка восстановить сессию
 const token = localStorage.getItem('token')
-const user = localStorage.getItem('user')
+const userRaw = localStorage.getItem('user')
 
-if (token && user) {
-    store.dispatch(setCredentials({ token, user: JSON.parse(user) }))
+if (token && userRaw) {
+    try {
+        const user = JSON.parse(userRaw)
+        store.dispatch(setCredentials({ token, user }))
+    } catch (e) {
+        console.error('Ошибка при чтении user из localStorage:', e)
+        // Очистим некорректные данные
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+    }
 }
 
 // Типы для useDispatch и useSelector

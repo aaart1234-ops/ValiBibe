@@ -13,6 +13,21 @@ interface LoginResponse {
     }
 }
 
+interface RegisterRequest {
+    email: string
+    password: string
+    nickname: string
+}
+
+interface RegisterResponse {
+    message: string
+    user: {
+        id: string
+        email: string
+        nickname: string
+    }
+}
+
 export const authApi = createApi({
     reducerPath: 'authApi',
     baseQuery: fetchBaseQuery({
@@ -27,7 +42,14 @@ export const authApi = createApi({
                 body: credentials,
             }),
         }),
+        register: builder.mutation<RegisterResponse, RegisterRequest>({
+            query: (data) => ({
+                url: '/auth/register',
+                method: 'POST',
+                body: data,
+            })
+        })
     }),
 })
 
-export const { useLoginMutation } = authApi
+export const { useLoginMutation, useRegisterMutation } = authApi
