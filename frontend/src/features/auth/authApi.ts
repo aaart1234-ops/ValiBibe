@@ -7,10 +7,6 @@ interface LoginRequest {
 
 interface LoginResponse {
     token: string
-    user: {
-        id: string
-        email: string
-    }
 }
 
 interface RegisterRequest {

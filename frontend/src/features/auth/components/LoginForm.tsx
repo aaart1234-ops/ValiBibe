@@ -29,11 +29,9 @@ const LoginForm = () => {
         e.preventDefault()
         try {
             const response = await login({ email, password }).unwrap()
-
             dispatch(setCredentials(response))
             localStorage.setItem('token', response.token)
-            localStorage.setItem('user', JSON.stringify(response.user))
-            navigate('/notes')
+            navigate('/')
         } catch (err) {
             console.error('Login failed:', err)
         }

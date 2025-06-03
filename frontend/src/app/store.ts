@@ -14,17 +14,14 @@ export const store = configureStore({
 
 // Попытка восстановить сессию
 const token = localStorage.getItem('token')
-const userRaw = localStorage.getItem('user')
 
-if (token && userRaw) {
+if (token) {
     try {
-        const user = JSON.parse(userRaw)
-        store.dispatch(setCredentials({ token, user }))
+        store.dispatch(setCredentials({ token }))
     } catch (e) {
         console.error('Ошибка при чтении user из localStorage:', e)
         // Очистим некорректные данные
         localStorage.removeItem('token')
-        localStorage.removeItem('user')
     }
 }
 
