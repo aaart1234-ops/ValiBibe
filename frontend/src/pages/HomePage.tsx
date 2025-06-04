@@ -3,14 +3,18 @@
 import React from 'react'
 import { Box, Typography, Button } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
+import { useAppDispatch } from '@/app/hooks'
+import {logout} from "@/features/auth/authSlice";
+
 
 const HomePage = () => {
     const navigate = useNavigate()
+    const dispatch = useAppDispatch()
 
     const handleLogout = () => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        navigate('/login')
+        dispatch(logout())  // <--- очищаем Redux-состояние
+        localStorage.removeItem('token')  // удаляем токен из localStorage
+        navigate('/login') // редирект на логин
     }
 
     return (

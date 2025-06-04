@@ -3,7 +3,7 @@ import { TextField, Button, Box, Typography, Alert } from '@mui/material'
 import { useLoginMutation } from '../authApi'
 import { useAppDispatch } from '@/app/hooks'
 import { setCredentials } from '../authSlice'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 
 const LoginForm = () => {
     const dispatch = useAppDispatch()
@@ -85,6 +85,11 @@ const LoginForm = () => {
             >
                 {isLoading ? 'Вход...' : 'Войти'}
             </Button>
+
+            <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+                Ещё нет аккаунта?{' '}
+                <Link to="/register">Зарегистрироваться</Link>
+            </Typography>
         </Box>
     )
 }

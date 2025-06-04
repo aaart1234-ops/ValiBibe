@@ -1,19 +1,25 @@
 import {useState} from 'react'
 import {TextField, Button, Box, Typography, Alert} from '@mui/material'
-import { useRegisterMutation } from '../authApi'
-import { useNavigate } from 'react-router-dom'
+import { useRegisterMutation, useLoginMutation } from '../authApi'
+import { useAppDispatch } from '@/app/hooks'
+import { setCredentials } from '../authSlice'
+import { useNavigate, Link } from 'react-router-dom'
 
 const RegisterForm = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [nickname, setNickname] = useState('')
+
     const [emailError, setEmailError] = useState('')
     const [passwordError, setPasswordError] = useState('')
     const [formError, setFormError] = useState('')
+
     const navigate = useNavigate()
 
     //Добавим вызов и состояния
     const [register, {isLoading}] = useRegisterMutation()
+    const [login] = useLoginMutation()
+    const dispatch = useAppDispatch()
 
     const validateEmail = (value: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -44,10 +50,16 @@ const RegisterForm = () => {
 
         //Логика отправки запроса
         try {
+            // 1. Регистрируем пользователя
             const res = await register({email, password, nickname}).unwrap()
-            navigate('/login', {
-                state: {successMessage: "Регистрация прошла успешно!"}
-            })
+
+            // 2. Логиним сразу же
+            const loginRes = await login({ email, password }).unwrap()
+
+            dispatch(setCredentials(loginRes))
+            localStorage.setItem('token', loginRes.token)
+
+            navigate('/')
 
             // Здесь можешь делать redirect или сброс формы
         } catch (err: any) {
@@ -112,6 +124,11 @@ const RegisterForm = () => {
             >
                 Зарегистрироваться
             </Button>
+
+            <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+                Уже есть аккаунт?{' '}
+                <Link to="/login">Войти</Link>
+            </Typography>
         </Box>
     )
 }
