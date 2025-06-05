@@ -4,9 +4,11 @@ import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import HomePage from '../pages/HomePage'
 import RequireAuth from '../features/auth/components/RequireAuth'
+import Header from '@/components/Header'
 
 const AppRouter = () => (
     <BrowserRouter>
+        <Header />
         <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
