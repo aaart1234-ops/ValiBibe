@@ -1,4 +1,6 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+// src/features/auth/authApi.ts
+import { createApi } from '@reduxjs/toolkit/query/react'
+import { baseQueryWithReauth } from '../api/baseQueryWithReauth'
 
 interface LoginRequest {
     email: string
@@ -26,10 +28,7 @@ interface RegisterResponse {
 
 export const authApi = createApi({
     reducerPath: 'authApi',
-    baseQuery: fetchBaseQuery({
-        baseUrl: 'http://localhost:8081', // замени на твой backend URL
-        credentials: 'include', // если работаешь с куками
-    }),
+    baseQuery: baseQueryWithReauth,
     endpoints: (builder) => ({
         login: builder.mutation<LoginResponse, LoginRequest>({
             query: (credentials) => ({

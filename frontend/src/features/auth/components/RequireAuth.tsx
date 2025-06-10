@@ -1,8 +1,10 @@
+// src/features/auth/components/RequireAuth.tsx
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { useAppSelector } from '@/app/hooks'
 
 const RequireAuth = ({ children }: { children: React.ReactNode }) => {
-    const token = localStorage.getItem('token')
+    const token = useAppSelector((state) => state.auth.token)
     const location = useLocation()
 
     if (!token) {
@@ -10,7 +12,7 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
         return <Navigate to="/login" state={{ from: location }} replace />
     }
 
-    return children
+    return <>{children}</>
 }
 
 export default RequireAuth
