@@ -6,6 +6,7 @@ import HomePage from '../pages/HomePage'
 import NoteList from '../pages/NoteList'
 import RequireAuth from '../features/auth/components/RequireAuth'
 import Header from '@/components/Header'
+import NoteDetailPage from '../pages/NoteDetailPage'
 
 const AppRouter = () => (
     <BrowserRouter>
@@ -13,6 +14,14 @@ const AppRouter = () => (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route
+                path="/"
+                element={
+                    <RequireAuth>
+                        <HomePage />
+                    </RequireAuth>
+                }
+            />
             <Route
                 path="/notes"
                 element={
@@ -22,10 +31,10 @@ const AppRouter = () => (
                 }
             />
             <Route
-                path="/"
+                path="/notes/:id"
                 element={
                     <RequireAuth>
-                        <HomePage />
+                        <NoteDetailPage />
                     </RequireAuth>
                 }
             />

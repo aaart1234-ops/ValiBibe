@@ -36,7 +36,7 @@ func (s *tokenService) GenerateToken(userID uuid.UUID) (string, error) {
 	// Создаем claims (полезные данные внутри токена)
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // Токен действует 24 часа
+		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(), // Токен действует 7 дней
 	}
 
 	// Создаем токен

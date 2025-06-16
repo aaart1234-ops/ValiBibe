@@ -31,7 +31,7 @@ const LoginForm = () => {
             const response = await login({ email, password }).unwrap()
             dispatch(setCredentials(response))
             localStorage.setItem('token', response.token)
-            navigate('/')
+            navigate('/notes')
         } catch (err) {
             console.error('Login failed:', err)
         }
@@ -69,7 +69,7 @@ const LoginForm = () => {
                 onChange={(e) => setPassword(e.target.value)}
             />
 
-            {error && (
+            {Boolean(error) && (
                 <Alert severity="error" sx={{ mt: 2 }}>
                     Неверный email или пароль
                 </Alert>

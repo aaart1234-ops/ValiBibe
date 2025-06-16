@@ -1,4 +1,4 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import {BaseQueryArg, createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react'
 
 export interface Note {
     id: string
@@ -11,6 +11,7 @@ export interface Note {
 
 export const noteApi = createApi({
     reducerPath: 'noteApi',
+    tagTypes: ['Note'],
     baseQuery: fetchBaseQuery({
         baseUrl: 'http://localhost:8081',
         prepareHeaders: (headers) => {
@@ -22,8 +23,30 @@ export const noteApi = createApi({
     endpoints: (builder) => ({
         getNotes: builder.query<Note[], void>({
             query: () => '/notes',
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.map((note) => ({ type: 'Note' as const, id: note.id })),
+                        { type: 'Note', id: 'LIST' },
+                    ]
+                    : [{ type: 'Note', id: 'LIST' }],
+        }),
+        getNote: builder.query<Note, string>({
+            query: (id) => `/notes/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Note', id }],
+        }),
+        updateNote: builder.mutation<Note, Partial<Note> & { id: string}>({
+            query: ({ id, ...patch }) => ({
+                url: `/notes/${id}`,
+                method: 'PUT',
+                body: patch,
+            }),
+            invalidatesTags: (result, error, { id }) => [
+                { type: 'Note', id },
+                { type: 'Note', id: 'LIST' },
+            ],
         }),
     }),
 })
 
-export const { useGetNotesQuery } = noteApi
+export const { useGetNotesQuery, useGetNoteQuery, useUpdateNoteMutation } = noteApi

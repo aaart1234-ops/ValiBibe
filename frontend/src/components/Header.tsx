@@ -42,12 +42,12 @@ const Header = () => {
                             color: 'inherit'
                         }}
                     >
-                        <img
+                        {/*<img
                             src={logo}
                             alt="Logo"
                             style={{height: 30, marginRight: 8, marginTop: 10}} // регулируй размер и отступ
-                        />
-                        {/*TradeMigo*/}
+                        />*/}
+                        <b>ValiBibe</b>
                     </Typography>
 
                     {/* Иконка бургера */}

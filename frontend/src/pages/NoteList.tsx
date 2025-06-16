@@ -9,6 +9,7 @@ import ViewListIcon from '@mui/icons-material/ViewList'
 import NoteCard from '../features/note/components/NoteCard'
 import NoteRow from '../features/note/components/NoteRow'
 import React from "react";
+import { Link } from 'react-router-dom'
 
 const NoteList = () => {
     const dispatch = useAppDispatch()
@@ -30,13 +31,19 @@ const NoteList = () => {
             {viewMode === 'card' ? (
                 <Grid container spacing={2}>
                     {notes.map(note => (
-                        <NoteCard note={note} />
+                        <Grid key={note.id} sx={{ width: { xs: '100%', sm: '48%', md: '33.33%' } }}>
+                            <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
+                                <NoteCard note={note} />
+                            </Link>
+                        </Grid>
                     ))}
                 </Grid>
             ) : (
                 <Box>
                     {notes.map(note => (
-                        <NoteRow key={note.id} note={note} />
+                        <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
+                            <NoteRow key={note.id} note={note} />
+                        </Link>
                     ))}
                 </Box>
             )}
