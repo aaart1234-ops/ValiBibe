@@ -14,7 +14,7 @@ const HomePage = () => {
     const dispatch = useAppDispatch()
 
     const handleLogout = () => {
-        dispatch(logout())  // <--- очищаем Redux-состояние
+        dispatch(logout()) // <--- очищаем Redux-состояние
         localStorage.removeItem('token')  // удаляем токен из localStorage
         navigate('/login') // редирект на логин
     }

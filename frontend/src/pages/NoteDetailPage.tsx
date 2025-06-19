@@ -3,17 +3,23 @@ import { useGetNoteQuery, useUpdateNoteMutation } from '@/features/note/noteApi'
 import { TextField, Button, CircularProgress, Box, Snackbar, Alert, Typography, IconButton } from '@mui/material'
 import { useEffect, useState } from 'react'
 import EditIcon from '@mui/icons-material/Edit'
+import { useAppSelector } from "@/app/hooks"
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
-    const { data: note, isLoading, error } = useGetNoteQuery(id!)
+    const { token } = useAppSelector(state => state.auth)
+
+    // id может быть undefined, поэтому skip нужен
+    const { data: note, isLoading, error, refetch } = useGetNoteQuery(id!, {
+        skip: !id,
+    })
+
     const [updateNote, { isSuccess }] = useUpdateNoteMutation()
     const [showSuccess, setShowSuccess] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
 
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
-
 
     useEffect(() => {
         if (note) {
@@ -23,6 +29,12 @@ const NoteDetailPage = () => {
     }, [note])
 
     useEffect(() => {
+        if (token) {
+            refetch()
+        }
+    }, [token])
+
+    useEffect(() => {
         if (isSuccess) {
             setShowSuccess(true)
             setTimeout(() => setShowSuccess(false), 3000)
@@ -30,13 +42,12 @@ const NoteDetailPage = () => {
     }, [isSuccess])
 
     if (isLoading) return <CircularProgress />
-    if (error || !note) return <div>Ошибка загрузки заметки (Не автторизован или заметтка не найдена)</div>
+    if (error || !note) return <div>Ошибка загрузки заметки (не авторизован или заметка не найдена)</div>
 
     const handleSubmit = async () => {
         try {
             await updateNote({ id: note.id, title, content }).unwrap()
             setIsEditing(false)
-            // Можно показать уведомление или navigate назад
         } catch (err) {
             console.error('Ошибка обновления заметки', err)
         }
