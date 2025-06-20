@@ -9,7 +9,7 @@ import (
 func CORSMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
         origin := c.Request.Header.Get("Origin")
-        if strings.HasPrefix(origin, "http://localhost") {
+        if strings.HasPrefix(origin, "*") {
             c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
             c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
             c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

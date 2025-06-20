@@ -13,7 +13,7 @@ export const noteApi = createApi({
     reducerPath: 'noteApi',
     tagTypes: ['Note'],
     baseQuery: fetchBaseQuery({
-        baseUrl: 'http://localhost:8081',
+        baseUrl: '/api',
         prepareHeaders: (headers) => {
             const token = localStorage.getItem('token')
             if (token) headers.set('Authorization', `Bearer ${token}`)

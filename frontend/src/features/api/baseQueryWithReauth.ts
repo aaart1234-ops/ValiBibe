@@ -10,7 +10,7 @@ export const baseQueryWithReauth: BaseQueryFn<
     unknown
 > = async (args, api, extraOptions) => {
     const baseQuery = fetchBaseQuery({
-        baseUrl: 'http://localhost:8081',
+        baseUrl: '/api',
         prepareHeaders: (headers, { getState }) => {
             const token = (getState() as RootState).auth.token
             if (token) {
