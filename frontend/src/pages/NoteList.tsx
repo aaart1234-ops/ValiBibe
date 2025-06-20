@@ -2,7 +2,21 @@
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { toggleViewMode } from '@/features/note/noteSlice'
 import { useGetNotesQuery } from '@/features/note/noteApi'
-import { Box, IconButton, Typography, CircularProgress, Select, MenuItem, FormControl, InputLabel, TextField, Button } from '@mui/material'
+import {
+    Box,
+    IconButton,
+    Typography,
+    CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
+    TextField,
+    Button,
+    Tooltip
+} from '@mui/material'
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import Grid from '@mui/material/Grid'
 import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import ViewListIcon from '@mui/icons-material/ViewList'
@@ -29,6 +43,12 @@ const NoteList = () => {
     }, [token])
 
     const [sortBy, setSortBy] = useState<'created_at' | 'next_review_at'>('created_at')
+
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc') // новое состояние
+    const toggleSortDirection = () => {
+        setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    }
+
     const [searchQuery, setSearchQuery] = useState('')
 
     const filteredAndSortedNotes = useMemo(() => {
@@ -41,9 +61,9 @@ const NoteList = () => {
             .sort((a, b) => {
                 const fieldA = new Date(a[sortBy]!).getTime()
                 const fieldB = new Date(b[sortBy]!).getTime()
-                return fieldB - fieldA
+                return sortDirection === 'asc' ? fieldA - fieldB : fieldB - fieldA
             })
-    }, [notes, sortBy, searchQuery])
+    }, [notes, sortBy, searchQuery, sortDirection])
 
     if (isLoading) return <CircularProgress />
     if (isError || !notes) return <Typography>Ошибка загрузки заметок</Typography>
@@ -75,6 +95,12 @@ const NoteList = () => {
                             <MenuItem value="next_review_at">По дате следующего повторения</MenuItem>
                         </Select>
                     </FormControl>
+
+                    <Tooltip title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'}`}>
+                        <IconButton onClick={toggleSortDirection}>
+                            {sortDirection === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                        </IconButton>
+                    </Tooltip>
 
                     <IconButton onClick={() => dispatch(toggleViewMode())}>
                         {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
