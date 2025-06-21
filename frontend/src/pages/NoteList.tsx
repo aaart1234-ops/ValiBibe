@@ -24,6 +24,10 @@ import NoteCard from '../features/note/components/NoteCard'
 import NoteRow from '../features/note/components/NoteRow'
 import React, {useState, useMemo, useEffect} from "react"
 import { Link } from 'react-router-dom'
+import AddIcon from '@mui/icons-material/Add'
+import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
+import { Fab } from '@mui/material'
+
 
 
 
@@ -35,6 +39,8 @@ const NoteList = () => {
     })
 
     const { token } = useAppSelector(state => state.auth)
+
+    const [openCreateDialog, setOpenCreateDialog] = useState(false)
 
     useEffect(() => {
         if (token) {
@@ -105,6 +111,31 @@ const NoteList = () => {
                     <IconButton onClick={() => dispatch(toggleViewMode())}>
                         {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
                     </IconButton>
+                    <IconButton
+                        onClick={() => setOpenCreateDialog(true)}
+                        color="primary"
+                        size="large"
+                        sx={{
+                            padding: 2,
+                            '&:hover': {
+                                backgroundColor: '#e0e0e0',
+                            }
+                        }}
+                    >
+                        <AddIcon fontSize="large" />
+                    </IconButton>
+                    <Fab
+                        color="primary"
+                        onClick={() => setOpenCreateDialog(true)}
+                        sx={{
+                            position: 'fixed',
+                            bottom: 24,
+                            right: 24,
+                            zIndex: 10,
+                        }}
+                    >
+                        <AddIcon />
+                    </Fab>
                 </Box>
             </Box>
 
@@ -151,6 +182,11 @@ const NoteList = () => {
                     ))}
                 </Box>
             )}
+            <NoteCreateDialog
+                open={openCreateDialog}
+                onClose={() => setOpenCreateDialog(false)}
+                onCreated={refetch}
+            />
         </Box>
     )
 }

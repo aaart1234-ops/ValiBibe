@@ -1,25 +1,24 @@
 import { useParams } from 'react-router-dom'
 import { useGetNoteQuery, useUpdateNoteMutation } from '@/features/note/noteApi'
 import { TextField, Button, CircularProgress, Box, Snackbar, Alert, Typography, IconButton } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import EditIcon from '@mui/icons-material/Edit'
 import { useAppSelector } from "@/app/hooks"
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
     const { token } = useAppSelector(state => state.auth)
 
-    // id может быть undefined, поэтому skip нужен
-    const { data: note, isLoading, error, refetch } = useGetNoteQuery(id!, {
-        skip: !id,
-    })
-
-    const [updateNote, { isSuccess }] = useUpdateNoteMutation()
-    const [showSuccess, setShowSuccess] = useState(false)
-    const [isEditing, setIsEditing] = useState(false)
+    const { data: note, isLoading, error, refetch } = useGetNoteQuery(id!, { skip: !id })
+    const [updateNote, { isLoading: isSaving }] = useUpdateNoteMutation()
 
     const [title, setTitle] = useState('')
     const [content, setContent] = useState('')
+    const [isEditing, setIsEditing] = useState(false)
+    const [showSuccess, setShowSuccess] = useState(false)
+    const titleRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         if (note) {
@@ -29,29 +28,28 @@ const NoteDetailPage = () => {
     }, [note])
 
     useEffect(() => {
-        if (token) {
-            refetch()
-        }
+        if (token) refetch()
     }, [token])
 
     useEffect(() => {
-        if (isSuccess) {
-            setShowSuccess(true)
-            setTimeout(() => setShowSuccess(false), 3000)
-        }
-    }, [isSuccess])
-
-    if (isLoading) return <CircularProgress />
-    if (error || !note) return <div>Ошибка загрузки заметки (не авторизован или заметка не найдена)</div>
+        if (isEditing) titleRef.current?.focus()
+    }, [isEditing])
 
     const handleSubmit = async () => {
+        if (!title.trim()) return alert("Введите заголовок")
+        if (!content.trim()) return alert("Введите текст заметки")
+
         try {
-            await updateNote({ id: note.id, title, content }).unwrap()
+            await updateNote({ id: note!.id, title, content }).unwrap()
+            setShowSuccess(true)
             setIsEditing(false)
         } catch (err) {
             console.error('Ошибка обновления заметки', err)
         }
     }
+
+    if (isLoading) return <CircularProgress />
+    if (error || !note) return <div>Ошибка загрузки заметки (не авторизован или заметка не найдена)</div>
 
     return (
         <Box display="flex" flexDirection="column" gap={2} p={2}>
@@ -70,33 +68,35 @@ const NoteDetailPage = () => {
                 <TextField
                     label="Заголовок"
                     value={title}
+                    inputRef={titleRef}
                     onChange={(e) => setTitle(e.target.value)}
                     fullWidth
-                    autoFocus
                 />
             )}
 
             {!isEditing ? (
-                <Box>
-                    <Typography variant="body1" whiteSpace="pre-line">{content}</Typography>
+                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
+                    <div dangerouslySetInnerHTML={{ __html: content }} />
                 </Box>
             ) : (
-                <TextField
-                    label="Текст"
-                    multiline
-                    rows={6}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    fullWidth
-                />
+                <ReactQuill value={content} onChange={setContent}
+                            style={{ minHeight: '300px', height: '300px' }}/>
             )}
 
-            <p><strong>Уровень запоминания:</strong> {note.memoryLevel}</p>
-            <p><strong>Следующее повторение:</strong> {note.next_review_at}</p>
+            <Box mt={4}>
+                <p><strong>Уровень запоминания:</strong> {note.memoryLevel}</p>
+                <p><strong>Следующее повторение:</strong> {note.next_review_at}</p>
+            </Box>
 
             {isEditing && (
                 <Box display="flex" gap={1}>
-                    <Button variant="contained" onClick={handleSubmit}>Сохранить</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? <CircularProgress size={20} /> : 'Сохранить'}
+                    </Button>
                     <Button variant="outlined" onClick={() => setIsEditing(false)}>Отмена</Button>
                 </Box>
             )}

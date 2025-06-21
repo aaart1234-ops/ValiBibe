@@ -46,7 +46,42 @@ export const noteApi = createApi({
                 { type: 'Note', id: 'LIST' },
             ],
         }),
+        createNote: builder.mutation<Note, { title: string; content: string }>({
+            query: (newNote) => ({
+                url: '/notes',
+                method: 'POST',
+                body: newNote,
+            }),
+            invalidatesTags: [{ type: 'Note', id: 'LIST' }],
+        }),
+        deleteNote: builder.mutation<{ success: boolean }, string>({
+            query: (id) => ({
+                url: `/notes/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, id) => [
+                { type: 'Note', id },
+                { type: 'Note', id: 'LIST' },
+            ],
+        }),
+        archiveNote: builder.mutation<{ success: boolean }, string>({
+            query: (id) => ({
+                url: `/notes/${id}/archive`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, id) => [
+                { type: 'Note', id },
+                { type: 'Note', id: 'LIST' },
+            ],
+        }),
     }),
 })
 
-export const { useGetNotesQuery, useGetNoteQuery, useUpdateNoteMutation } = noteApi
+export const {
+    useGetNotesQuery,
+    useGetNoteQuery,
+    useUpdateNoteMutation,
+    useCreateNoteMutation,
+    useDeleteNoteMutation,
+    useArchiveNoteMutation,
+} = noteApi
