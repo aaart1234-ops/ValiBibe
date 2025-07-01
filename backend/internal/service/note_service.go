@@ -110,8 +110,8 @@ func (s *NoteService) GetNoteByID(ctx context.Context, userID, noteID string) (*
     return note, nil
 }
 
-func (s *NoteService) GetAllNotesByUserID(ctx context.Context, userID string) ([]models.Note, error) {
-    return s.noteRepo.GetAllNotesByUserID(ctx, userID)
+func (s *NoteService) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
+    return s.noteRepo.GetAllNotesByUserID(ctx, filter)
 }
 
 func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID string, input *models.NoteInput) (*models.Note, error) {

@@ -12,9 +12,13 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import React, { useEffect, useRef, useState } from 'react'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
 import { useCreateNoteMutation } from '@/features/note/noteApi'
+import { RichTextEditor } from '@mantine/tiptap'
+import { useEditor } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Underline from '@tiptap/extension-underline'
+import Link from '@tiptap/extension-link'
+import Highlight from '@tiptap/extension-highlight'
 
 interface Props {
     open: boolean
@@ -37,6 +41,17 @@ const CreateNoteModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
         }
     }, [open])
 
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Underline,
+            Link,
+            Highlight,
+            ],
+        content,
+        onUpdate: ({ editor }) => setContent(editor.getHTML()),
+    })
+
     const handleSubmit = async () => {
         if (!title.trim()) {
             setError('Заголовок обязателен')
@@ -50,6 +65,7 @@ const CreateNoteModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
             onClose()
             setTitle('')
             setContent('')
+            editor?.commands.setContent('') // Очистка редактора
         } catch (e) {
             setError('Ошибка при создании заметки')
         }
@@ -62,7 +78,7 @@ const CreateNoteModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
     }
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" onKeyDown={handleKeyDown} >
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" onKeyDown={handleKeyDown}>
             <DialogTitle>
                 Новая заметка
                 <IconButton
@@ -89,13 +105,24 @@ const CreateNoteModal: React.FC<Props> = ({ open, onClose, onCreated }) => {
                         error={!!error}
                         helperText={error}
                     />
-                    <ReactQuill
-                        value={content}
-                        onChange={setContent}
-                        theme="snow"
-                        style={{ minHeight: '200px', height: '200px' }}
-                        placeholder="Содержание..."
-                    />
+                    <RichTextEditor editor={editor}>
+                        <RichTextEditor.Toolbar sticky stickyOffset={60}>
+                            <RichTextEditor.Bold />
+                            <RichTextEditor.Italic />
+                            <RichTextEditor.Underline />
+                            <RichTextEditor.H1 />
+                            <RichTextEditor.H2 />
+                            <RichTextEditor.Link />
+                            <RichTextEditor.Highlight />
+                            <RichTextEditor.BulletList />
+                            <RichTextEditor.OrderedList />
+                            <RichTextEditor.Blockquote />
+                            <RichTextEditor.ClearFormatting />
+                        </RichTextEditor.Toolbar>
+                        <RichTextEditor.Content
+                            style={{ minHeight: '200px', borderRadius: 8 }}
+                        />
+                    </RichTextEditor>
                 </Box>
             </DialogContent>
             <DialogActions>

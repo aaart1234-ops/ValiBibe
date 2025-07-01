@@ -68,17 +68,28 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 }
 
 // GetAllNotes godoc
-// @Summary Получить все заметки пользователя
+// @Summary Получить заметки пользователя с фильтрацией и сортировкой
+// @Description Возвращает список заметок текущего пользователя. Поддерживаются параметры поиска и сортировки.
 // @Tags notes
 // @Security BearerAuth
 // @Produce json
+// @Param search query string false "Поиск по заголовку или содержимому"
+// @Param sort_by query string false "Поле сортировки: created_at (дата создания), next_review_at (дата следующего повторения)" Enums(created_at, next_review_at) default(created_at)
+// @Param order query string false "Порядок сортировки: asc (по возрастанию), desc (по убыванию)" Enums(asc, desc) default(desc)
 // @Success 200 {array} models.Note
 // @Failure 500 {object} map[string]string
 // @Router /notes [get]
 func (c *NoteController) GetAllNotes(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
 
-    notes, err := c.noteService.GetAllNotesByUserID(ctx, userID)
+    filter := models.NoteFilter{
+        UserID: userID,
+        Search: ctx.Query("search"),
+        SortBy: ctx.DefaultQuery("sort_by", "created_at"),
+        Order:  ctx.DefaultQuery("order", "desc"),
+    }
+
+    notes, err := c.noteService.GetAllNotesByUserID(ctx, &filter)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return

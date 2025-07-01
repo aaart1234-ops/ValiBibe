@@ -21,8 +21,15 @@ export const noteApi = createApi({
         },
     }),
     endpoints: (builder) => ({
-        getNotes: builder.query<Note[], void>({
-            query: () => '/notes',
+        getNotes: builder.query<Note[], { sortBy?: string; sortDirection?: string; search?: string }>({
+            query: ({ sortBy = 'created_at', sortDirection = 'desc', search = '' } = {}) => ({
+                url: '/notes',
+                params: {
+                    sort_by: sortBy,
+                    sort_direction: sortDirection,
+                    search,
+                },
+            }),
             providesTags: (result) =>
                 result
                     ? [

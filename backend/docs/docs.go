@@ -199,13 +199,44 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Возвращает список заметок текущего пользователя. Поддерживаются параметры поиска и сортировки.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "notes"
                 ],
-                "summary": "Получить все заметки пользователя",
+                "summary": "Получить заметки пользователя с фильтрацией и сортировкой",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поиск по заголовку или содержимому",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "created_at",
+                            "next_review_at"
+                        ],
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Поле сортировки: created_at (дата создания), next_review_at (дата следующего повторения)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Порядок сортировки: asc (по возрастанию), desc (по убыванию)",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

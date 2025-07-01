@@ -28,8 +28,8 @@ func (m *MockNoteRepo) GetNoteByID(ctx context.Context, noteID string) (*models.
 	return note, args.Error(1)
 }
 
-func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, userID string) ([]models.Note, error) {
-	args := m.Called(ctx, userID)
+func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
+	args := m.Called(ctx, filter)
 	notes, _ := args.Get(0).([]models.Note)
 	return notes, args.Error(1)
 }
@@ -104,16 +104,22 @@ func TestNoteService_GetAllNotesByUserID(t *testing.T) {
 	noteService := service.NewNoteService(mockRepo)
 	ctx := context.Background()
 
-	userID := uuid.New()
-
-	notes := []models.Note{
-		{ID: uuid.New(), Title: "Note 1", Content: "Content 1", UserID: userID},
-		{ID: uuid.New(), Title: "Note 2", Content: "Content 2", UserID: userID},
+	userID := uuid.New().String()
+	filter := &models.NoteFilter{
+		UserID: userID,
+		Search: "Note",
+		SortBy: "created_at",
+		Order:  "desc",
 	}
 
-	mockRepo.On("GetAllNotesByUserID", ctx, userID.String()).Return(notes, nil)
+	notes := []models.Note{
+		{ID: uuid.New(), Title: "Note 1", Content: "Content 1", UserID: uuid.MustParse(userID)},
+		{ID: uuid.New(), Title: "Note 2", Content: "Content 2", UserID: uuid.MustParse(userID)},
+	}
 
-	result, err := noteService.GetAllNotesByUserID(ctx, userID.String())
+	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(notes, nil)
+
+	result, err := noteService.GetAllNotesByUserID(ctx, filter)
 	assert.NoError(t, err)
 	assert.Equal(t, notes, result)
 

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 	"my_app_backend/internal/models"
@@ -29,11 +30,31 @@ func (r *NoteRepo) GetNoteByID(ctx context.Context, id string) (*models.Note, er
 	return &note, err
 }
 
-func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, userID string) ([]models.Note, error) {
+func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
 	var notes []models.Note
-	err := r.db.WithContext(ctx).
-		Where("user_id = ? AND archived = false", userID).
-		Find(&notes).Error
+
+	query := r.db.WithContext(ctx).
+		Where("user_id = ? AND archived = false", filter.UserID)
+
+	if filter.Search != "" {
+		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(filter.Search)+"%")
+	}
+
+	// Безопасно ограничиваем только разрешённые поля
+	sortBy := map[string]string{
+		"created_at":      "created_at",
+		"next_review_at":  "next_review_at",
+	}[filter.SortBy]
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+
+	order := "desc"
+	if strings.ToLower(filter.Order) == "asc" {
+		order = "asc"
+	}
+
+	err := query.Order(sortBy + " " + order).Find(&notes).Error
 	return notes, err
 }
 

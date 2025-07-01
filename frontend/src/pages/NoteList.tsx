@@ -13,69 +13,60 @@ import {
     InputLabel,
     TextField,
     Button,
-    Tooltip
+    Tooltip,
+    Fab,
+    Grid
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
-import Grid from '@mui/material/Grid'
 import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import ViewListIcon from '@mui/icons-material/ViewList'
 import NoteCard from '../features/note/components/NoteCard'
 import NoteRow from '../features/note/components/NoteRow'
-import React, {useState, useMemo, useEffect} from "react"
+import React, { useState, useEffect } from "react"
 import { Link } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
 import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
-import { Fab } from '@mui/material'
-
-
-
+import { useDebounce } from 'use-debounce'
 
 const NoteList = () => {
     const dispatch = useAppDispatch()
     const viewMode = useAppSelector((state) => state.notes.viewMode)
-    const { data: notes, isLoading, isError, refetch } = useGetNotesQuery(undefined, {
-        refetchOnMountOrArgChange: true, // полезно в любом случае
-    })
-
     const { token } = useAppSelector(state => state.auth)
 
     const [openCreateDialog, setOpenCreateDialog] = useState(false)
 
+    // Состояния сортировки и фильтрации
+    const [sortBy, setSortBy] = useState<'created_at' | 'next_review_at'>('created_at')
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+    const [searchQuery, setSearchQuery] = useState('')
+    const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
+
+    // Переключение направления сортировки
+    const toggleSortDirection = () => {
+        setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    }
+
+    // Получаем заметки с сервера с учетом параметров сортировки и фильтрации
+    const { data: notes, isLoading, isError, refetch } = useGetNotesQuery(
+        { search: debouncedSearchQuery, sortBy, sortDirection },
+        {
+            refetchOnMountOrArgChange: true,
+        }
+    )
+
+    // Повторная загрузка при появлении токена
     useEffect(() => {
         if (token) {
             refetch()
         }
     }, [token])
 
-    const [sortBy, setSortBy] = useState<'created_at' | 'next_review_at'>('created_at')
-
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc') // новое состояние
-    const toggleSortDirection = () => {
-        setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
-    }
-
-    const [searchQuery, setSearchQuery] = useState('')
-
-    const filteredAndSortedNotes = useMemo(() => {
-        if (!notes) return []
-
-        return [...notes]
-            .filter(note =>
-                note.title.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .sort((a, b) => {
-                const fieldA = new Date(a[sortBy]!).getTime()
-                const fieldB = new Date(b[sortBy]!).getTime()
-                return sortDirection === 'asc' ? fieldA - fieldB : fieldB - fieldA
-            })
-    }, [notes, sortBy, searchQuery, sortDirection])
-
     if (isLoading) return <CircularProgress />
     if (isError || !notes) return <Typography>Ошибка загрузки заметок</Typography>
 
     return (
-        <Box mt={4}>
+        <Box mt={4} pl={4} pr={4} pb={4}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
                 <Typography variant="h5">Мои заметки</Typography>
 
@@ -111,6 +102,7 @@ const NoteList = () => {
                     <IconButton onClick={() => dispatch(toggleViewMode())}>
                         {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
                     </IconButton>
+
                     <IconButton
                         onClick={() => setOpenCreateDialog(true)}
                         color="primary"
@@ -124,6 +116,7 @@ const NoteList = () => {
                     >
                         <AddIcon fontSize="large" />
                     </IconButton>
+
                     <Fab
                         color="primary"
                         onClick={() => setOpenCreateDialog(true)}
@@ -139,7 +132,7 @@ const NoteList = () => {
                 </Box>
             </Box>
 
-            {filteredAndSortedNotes.length === 0 ? (
+            {notes.length === 0 ? (
                 <Box textAlign="center" mt={10}>
                     <Typography variant="h6" gutterBottom>
                         У вас пока нет заметок
@@ -158,7 +151,7 @@ const NoteList = () => {
                 </Box>
             ) : viewMode === 'card' ? (
                 <Grid container spacing={1} justifyContent="space-between" mt={8}>
-                    {filteredAndSortedNotes.map(note => (
+                    {notes.map(note => (
                         <Grid
                             key={note.id}
                             sx={{ width: { xs: '100%', sm: '31%', md: '31%' } }}
@@ -175,13 +168,14 @@ const NoteList = () => {
                 </Grid>
             ) : (
                 <Box>
-                    {filteredAndSortedNotes.map(note => (
+                    {notes.map(note => (
                         <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
                             <NoteRow note={note} />
                         </Link>
                     ))}
                 </Box>
             )}
+
             <NoteCreateDialog
                 open={openCreateDialog}
                 onClose={() => setOpenCreateDialog(false)}

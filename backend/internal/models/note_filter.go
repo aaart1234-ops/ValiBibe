@@ -1,0 +1,9 @@
+package models
+
+type NoteFilter struct {
+    UserID string
+    Search string
+    SortBy string
+    Order string
+}
+

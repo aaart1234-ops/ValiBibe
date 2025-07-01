@@ -80,3 +80,9 @@ migrate-reset:
 		-path=/migrations \
 		-database "postgres://postgres:password@localhost:5432/spaced_repetition_db?sslmode=disable" \
 		down
+
+test:
+	go test -v ./tests/...
+
+docs:
+	swag init -g cmd/main.go -o docs

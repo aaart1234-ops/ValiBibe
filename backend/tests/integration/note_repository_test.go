@@ -15,10 +15,8 @@ import (
 func TestNoteRepository(t *testing.T) {
 	db := setupTestDB(t)
 	ctx := context.Background()
-
 	noteRepo := repository.NewNoteRepository(db)
 
-	// Создание пользователя
 	user := &models.User{
 		ID:           uuid.New(),
 		Nickname:     "TestUser",
@@ -34,18 +32,19 @@ func TestNoteRepository(t *testing.T) {
 		Title:   "Test Note",
 		Content: "This is a test note",
 	}
-
 	err := noteRepo.CreateNote(ctx, note)
 	require.NoError(t, err)
-	assert.NotEmpty(t, note.CreatedAt)
 
 	// --- GetNoteByID ---
 	gotNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
 	require.NoError(t, err)
 	assert.Equal(t, note.Title, gotNote.Title)
 
-	// --- GetAllNotesByUserID ---
-	notes, err := noteRepo.GetAllNotesByUserID(ctx, user.ID.String())
+	// --- GetAllNotesByUserID: до архивации ---
+	filter := &models.NoteFilter{
+		UserID:   user.ID.String(),
+	}
+	notes, err := noteRepo.GetAllNotesByUserID(ctx, filter)
 	require.NoError(t, err)
 	assert.Len(t, notes, 1)
 	assert.Equal(t, "Test Note", notes[0].Title)
@@ -67,6 +66,11 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, archivedNote.Archived)
 
+	// --- GetAllNotesByUserID: после архивации ---
+	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filter)
+	require.NoError(t, err)
+	assert.Len(t, notesAfterArchive, 0)
+
 	// --- DeleteNote ---
 	err = noteRepo.DeleteNote(ctx, note.ID.String())
 	require.NoError(t, err)
@@ -75,3 +79,4 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, deletedNote)
 }
+

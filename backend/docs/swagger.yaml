@@ -192,6 +192,30 @@ paths:
       - auth
   /notes:
     get:
+      description: Возвращает список заметок текущего пользователя. Поддерживаются
+        параметры поиска и сортировки.
+      parameters:
+      - description: Поиск по заголовку или содержимому
+        in: query
+        name: search
+        type: string
+      - default: created_at
+        description: 'Поле сортировки: created_at (дата создания), next_review_at
+          (дата следующего повторения)'
+        enum:
+        - created_at
+        - next_review_at
+        in: query
+        name: sort_by
+        type: string
+      - default: desc
+        description: 'Порядок сортировки: asc (по возрастанию), desc (по убыванию)'
+        enum:
+        - asc
+        - desc
+        in: query
+        name: order
+        type: string
       produces:
       - application/json
       responses:
@@ -209,7 +233,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Получить все заметки пользователя
+      summary: Получить заметки пользователя с фильтрацией и сортировкой
       tags:
       - notes
     post:
