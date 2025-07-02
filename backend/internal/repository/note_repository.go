@@ -32,7 +32,7 @@ func (r *NoteRepo) GetNoteByID(ctx context.Context, id string) (*models.Note, er
 
 func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
     var (
-        notes []models.PaginatedNotes
+        notes []models.Note
         total int64
     )
 
