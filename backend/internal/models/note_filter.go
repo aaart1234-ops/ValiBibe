@@ -5,5 +5,7 @@ type NoteFilter struct {
     Search string
     SortBy string
     Order string
+    Limit int
+    Offset int
 }
 

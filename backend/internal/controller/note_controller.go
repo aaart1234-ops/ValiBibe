@@ -2,6 +2,7 @@ package controller
 
 import (
     "net/http"
+    "strconv"
 
     "github.com/gin-gonic/gin"
     "my_app_backend/internal/models"
@@ -76,26 +77,33 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 // @Param search query string false "Поиск по заголовку или содержимому"
 // @Param sort_by query string false "Поле сортировки: created_at (дата создания), next_review_at (дата следующего повторения)" Enums(created_at, next_review_at) default(created_at)
 // @Param order query string false "Порядок сортировки: asc (по возрастанию), desc (по убыванию)" Enums(asc, desc) default(desc)
-// @Success 200 {array} models.Note
+// @Param limit query int false "Максимальное количество записей" minimum(1) default(10)
+// @Param offset query int false "Смещение для пагинации" minimum(0) default(0)
+// @Success 200 {object} models.PaginatedNotes
 // @Failure 500 {object} map[string]string
 // @Router /notes [get]
 func (c *NoteController) GetAllNotes(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
+
+    limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+    offset, _ := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
 
     filter := models.NoteFilter{
         UserID: userID,
         Search: ctx.Query("search"),
         SortBy: ctx.DefaultQuery("sort_by", "created_at"),
         Order:  ctx.DefaultQuery("order", "desc"),
+        Limit:  limit,
+        Offset: offset,
     }
 
-    notes, err := c.noteService.GetAllNotesByUserID(ctx, &filter)
+    result, err := c.noteService.GetAllNotesByUserID(ctx, &filter)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
 
-    ctx.JSON(http.StatusOK, notes)
+    ctx.JSON(http.StatusOK, result)
 }
 
 // UpdateNote godoc

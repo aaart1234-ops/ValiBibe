@@ -110,7 +110,7 @@ func (s *NoteService) GetNoteByID(ctx context.Context, userID, noteID string) (*
     return note, nil
 }
 
-func (s *NoteService) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
+func (s *NoteService) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
     return s.noteRepo.GetAllNotesByUserID(ctx, filter)
 }
 

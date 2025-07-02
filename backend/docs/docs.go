@@ -235,16 +235,29 @@ const docTemplate = `{
                         "description": "Порядок сортировки: asc (по возрастанию), desc (по убыванию)",
                         "name": "order",
                         "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Максимальное количество записей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Смещение для пагинации",
+                        "name": "offset",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/models.Note"
-                            }
+                            "$ref": "#/definitions/models.PaginatedNotes"
                         }
                     },
                     "500": {
@@ -625,6 +638,20 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "minLength": 1
+                }
+            }
+        },
+        "models.PaginatedNotes": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Note"
+                    }
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },

@@ -41,6 +41,15 @@ definitions:
     - content
     - title
     type: object
+  models.PaginatedNotes:
+    properties:
+      notes:
+        items:
+          $ref: '#/definitions/models.Note'
+        type: array
+      total:
+        type: integer
+    type: object
   models.RegisterRequest:
     properties:
       email:
@@ -216,15 +225,25 @@ paths:
         in: query
         name: order
         type: string
+      - default: 10
+        description: Максимальное количество записей
+        in: query
+        minimum: 1
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение для пагинации
+        in: query
+        minimum: 0
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/models.Note'
-            type: array
+            $ref: '#/definitions/models.PaginatedNotes'
         "500":
           description: Internal Server Error
           schema:

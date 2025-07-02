@@ -30,32 +30,58 @@ func (r *NoteRepo) GetNoteByID(ctx context.Context, id string) (*models.Note, er
 	return &note, err
 }
 
-func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
-	var notes []models.Note
+func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
+    var (
+        notes []models.PaginatedNotes
+        total int64
+    )
 
-	query := r.db.WithContext(ctx).
-		Where("user_id = ? AND archived = false", filter.UserID)
+    baseQuery := r.db.WithContext(ctx).
+        Model(&models.Note{}).
+        Where("user_id = ? AND archived = false", filter.UserID)
 
-	if filter.Search != "" {
-		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(filter.Search)+"%")
-	}
+    // Применяем фильтр поиска
+    if filter.Search != "" {
+        baseQuery = baseQuery.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(filter.Search)+"%")
+    }
 
-	// Безопасно ограничиваем только разрешённые поля
-	sortBy := map[string]string{
-		"created_at":      "created_at",
-		"next_review_at":  "next_review_at",
-	}[filter.SortBy]
-	if sortBy == "" {
-		sortBy = "created_at"
-	}
+    // Считаем общее количество записей
+    if err := baseQuery.Count(&total).Error; err != nil {
+        return nil, err
+    }
 
-	order := "desc"
-	if strings.ToLower(filter.Order) == "asc" {
-		order = "asc"
-	}
+    // Применяем сортировку
+    sortBy := map[string]string{
+        "created_at":     "created_at",
+        "next_review_at": "next_review_at",
+    }[filter.SortBy]
+    if sortBy == "" {
+        sortBy = "created_at"
+    }
 
-	err := query.Order(sortBy + " " + order).Find(&notes).Error
-	return notes, err
+    order := "desc"
+    if strings.ToLower(filter.Order) == "asc" {
+        order = "asc"
+    }
+
+    // Получаем записи с пагинацией
+    query := baseQuery.Order(sortBy + " " + order)
+
+    if filter.Limit > 0 {
+        query = query.Limit(filter.Limit)
+    }
+    if filter.Offset >= 0 {
+        query = query.Offset(filter.Offset)
+    }
+
+    if err := query.Find(&notes).Error; err != nil {
+        return nil, err
+    }
+
+    return &models.PaginatedNotes{
+        Notes: notes,
+        Total: total,
+    }, nil
 }
 
 func (r *NoteRepo) UpdateNote(ctx context.Context, note *models.Note) error {
