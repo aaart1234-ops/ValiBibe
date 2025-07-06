@@ -3,6 +3,7 @@ package unit
 import (
 	"context"
 	"testing"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -28,10 +29,16 @@ func (m *MockNoteRepo) GetNoteByID(ctx context.Context, noteID string) (*models.
 	return note, args.Error(1)
 }
 
-func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) ([]models.Note, error) {
+func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
 	args := m.Called(ctx, filter)
-	notes, _ := args.Get(0).([]models.Note)
-	return notes, args.Error(1)
+
+    // Безопасно извлекаем PaginatedNotes
+    result, ok := args.Get(0).(*models.PaginatedNotes)
+    if !ok && args.Get(0) != nil {
+    	return nil, fmt.Errorf("expected *models.PaginatedNotes, got %T", args.Get(0))
+    }
+
+    return result, args.Error(1)
 }
 
 func (m *MockNoteRepo) UpdateNote(ctx context.Context, note *models.Note) error {
@@ -117,11 +124,15 @@ func TestNoteService_GetAllNotesByUserID(t *testing.T) {
 		{ID: uuid.New(), Title: "Note 2", Content: "Content 2", UserID: uuid.MustParse(userID)},
 	}
 
-	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(notes, nil)
+	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(&models.PaginatedNotes{
+        Notes: notes,
+        Total: int64(len(notes)),
+    }, nil)
 
 	result, err := noteService.GetAllNotesByUserID(ctx, filter)
 	assert.NoError(t, err)
-	assert.Equal(t, notes, result)
+	assert.Equal(t, notes, result.Notes)
+	assert.Equal(t, int64(2), result.Total)
 
 	mockRepo.AssertExpectations(t)
 }

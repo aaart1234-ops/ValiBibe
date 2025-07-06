@@ -46,8 +46,8 @@ func TestNoteRepository(t *testing.T) {
 	}
 	notes, err := noteRepo.GetAllNotesByUserID(ctx, filter)
 	require.NoError(t, err)
-	assert.Len(t, notes, 1)
-	assert.Equal(t, "Test Note", notes[0].Title)
+	assert.Len(t, notes.Notes, 1)
+	assert.Equal(t, "Test Note", notes.Notes[0].Title)
 
 	// --- UpdateNote ---
 	note.Title = "Updated Title"
@@ -69,7 +69,7 @@ func TestNoteRepository(t *testing.T) {
 	// --- GetAllNotesByUserID: после архивации ---
 	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filter)
 	require.NoError(t, err)
-	assert.Len(t, notesAfterArchive, 0)
+	assert.Len(t, notesAfterArchive.Notes, 0)
 
 	// --- DeleteNote ---
 	err = noteRepo.DeleteNote(ctx, note.ID.String())

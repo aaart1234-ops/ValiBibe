@@ -9,6 +9,11 @@ export interface Note {
     next_review_at?: string
 }
 
+export interface PaginatedNotes {
+    notes: Note[]
+    total: number
+}
+
 export const noteApi = createApi({
     reducerPath: 'noteApi',
     tagTypes: ['Note'],
@@ -21,19 +26,21 @@ export const noteApi = createApi({
         },
     }),
     endpoints: (builder) => ({
-        getNotes: builder.query<Note[], { sortBy?: string; sortDirection?: string; search?: string }>({
-            query: ({ sortBy = 'created_at', sortDirection = 'desc', search = '' } = {}) => ({
+        getNotes: builder.query<PaginatedNotes, { sortBy?: string; sortDirection?: string; search?: string; limit?: number; offset?: number }>({
+            query: ({ sortBy = 'created_at', sortDirection = 'desc', search = '', limit, offset } = {}) => ({
                 url: '/notes',
                 params: {
                     sort_by: sortBy,
                     sort_direction: sortDirection,
                     search,
+                    limit,
+                    offset,
                 },
             }),
             providesTags: (result) =>
                 result
                     ? [
-                        ...result.map((note) => ({ type: 'Note' as const, id: note.id })),
+                        ...result.notes.map((note: Note) => ({ type: 'Note' as const, id: note.id })),
                         { type: 'Note', id: 'LIST' },
                     ]
                     : [{ type: 'Note', id: 'LIST' }],

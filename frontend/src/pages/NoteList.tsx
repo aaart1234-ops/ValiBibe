@@ -1,7 +1,9 @@
 // components/NoteList.tsx
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { toggleViewMode } from '@/features/note/noteSlice'
-import { useGetNotesQuery } from '@/features/note/noteApi'
+
+import React, { useState, useEffect } from "react"
+import { Link } from 'react-router-dom'
+import { useDebounce } from 'use-debounce'
+
 import {
     Box,
     IconButton,
@@ -15,24 +17,28 @@ import {
     Button,
     Tooltip,
     Fab,
-    Grid
+    Grid,
+    Pagination
 } from '@mui/material'
+
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import ViewListIcon from '@mui/icons-material/ViewList'
-import NoteCard from '../features/note/components/NoteCard'
-import NoteRow from '../features/note/components/NoteRow'
-import React, { useState, useEffect } from "react"
-import { Link } from 'react-router-dom'
 import AddIcon from '@mui/icons-material/Add'
+
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { toggleViewMode } from '@/features/note/noteSlice'
+import { useGetNotesQuery } from '@/features/note/noteApi'
+
+import NoteCard from '@/features/note/components/NoteCard'
+import NoteRow from '@/features/note/components/NoteRow'
 import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
-import { useDebounce } from 'use-debounce'
 
 const NoteList = () => {
     const dispatch = useAppDispatch()
     const viewMode = useAppSelector((state) => state.notes.viewMode)
-    const { token } = useAppSelector(state => state.auth)
+    const { token } = useAppSelector((state) => state.auth)
 
     const [openCreateDialog, setOpenCreateDialog] = useState(false)
 
@@ -41,21 +47,30 @@ const NoteList = () => {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
+    const [limit, setLimit] = useState(10)
+    const [page, setPage] = useState(0) // 0 = первая страница
+    const offset = page * limit
 
-    // Переключение направления сортировки
     const toggleSortDirection = () => {
         setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
     }
 
-    // Получаем заметки с сервера с учетом параметров сортировки и фильтрации
-    const { data: notes, isLoading, isError, refetch } = useGetNotesQuery(
-        { search: debouncedSearchQuery, sortBy, sortDirection },
+    const { data, isLoading, isError, refetch } = useGetNotesQuery(
+        {
+            search: debouncedSearchQuery,
+            sortBy,
+            sortDirection,
+            limit,
+            offset,
+        },
         {
             refetchOnMountOrArgChange: true,
         }
     )
 
-    // Повторная загрузка при появлении токена
+    const notes = data?.notes || []
+    const total = data?.total || 0
+
     useEffect(() => {
         if (token) {
             refetch()
@@ -67,7 +82,15 @@ const NoteList = () => {
 
     return (
         <Box mt={4} pl={4} pr={4} pb={4}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
+            {/* Верхняя панель управления */}
+            <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+                flexWrap="wrap"
+                gap={2}
+            >
                 <Typography variant="h5">Мои заметки</Typography>
 
                 <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
@@ -111,7 +134,7 @@ const NoteList = () => {
                             padding: 2,
                             '&:hover': {
                                 backgroundColor: '#e0e0e0',
-                            }
+                            },
                         }}
                     >
                         <AddIcon fontSize="large" />
@@ -132,6 +155,7 @@ const NoteList = () => {
                 </Box>
             </Box>
 
+            {/* Основной контент */}
             {notes.length === 0 ? (
                 <Box textAlign="center" mt={10}>
                     <Typography variant="h6" gutterBottom>
@@ -150,11 +174,11 @@ const NoteList = () => {
                     </Button>
                 </Box>
             ) : viewMode === 'card' ? (
-                <Grid container spacing={1} justifyContent="space-between" mt={8}>
-                    {notes.map(note => (
+                <Grid container spacing={2} justifyContent="start" mt={8}>
+                    {notes.map((note) => (
                         <Grid
                             key={note.id}
-                            sx={{ width: { xs: '100%', sm: '31%', md: '31%' } }}
+                            sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }}
                             display="flex"
                         >
                             <Link
@@ -168,14 +192,46 @@ const NoteList = () => {
                 </Grid>
             ) : (
                 <Box>
-                    {notes.map(note => (
-                        <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
+                    {notes.map((note) => (
+                        <Link
+                            key={note.id}
+                            to={`/notes/${note.id}`}
+                            style={{ textDecoration: 'none' }}
+                        >
                             <NoteRow note={note} />
                         </Link>
                     ))}
                 </Box>
             )}
 
+            {/* Пагинация */}
+            <Box display="flex" justifyContent="center" alignItems="center" mt={8} gap={2}>
+                <FormControl size="small">
+                    <InputLabel>Показывать</InputLabel>
+                    <Select
+                        value={limit}
+                        label="Показывать"
+                        onChange={(e) => {
+                            setLimit(Number(e.target.value))
+                            setPage(0)
+                        }}
+                    >
+                        <MenuItem value={5}>5</MenuItem>
+                        <MenuItem value={10}>10</MenuItem>
+                        <MenuItem value={20}>20</MenuItem>
+                        <MenuItem value={50}>50</MenuItem>
+                    </Select>
+                </FormControl>
+
+                <Pagination
+                    count={Math.ceil(total / limit)}
+                    page={page + 1}
+                    onChange={(_, value) => setPage(value - 1)}
+                    color="primary"
+                />
+            </Box>
+
+            {/* Диалог создания */}
             <NoteCreateDialog
                 open={openCreateDialog}
                 onClose={() => setOpenCreateDialog(false)}

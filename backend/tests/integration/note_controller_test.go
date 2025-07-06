@@ -195,10 +195,12 @@ func TestNotesListAndUnauthorized(t *testing.T) {
 	r.ServeHTTP(wGetAll, reqGetAll)
 	assert.Equal(t, 200, wGetAll.Code)
 
-	var notes []models.Note
-	err := json.Unmarshal(wGetAll.Body.Bytes(), &notes)
-	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(notes), 3)
+	var paginated struct {
+        Notes []models.Note `json:"notes"`
+    }
+    err := json.Unmarshal(wGetAll.Body.Bytes(), &paginated)
+    require.NoError(t, err)
+    assert.GreaterOrEqual(t, len(paginated.Notes), 3)
 
 	// --- Unauthorized access ---
 	reqUnauthorized, _ := http.NewRequest("GET", "/notes", nil)
