@@ -23,6 +23,12 @@ func (m *MockNoteRepo) CreateNote(ctx context.Context, note *models.Note) error 
 	return args.Error(0)
 }
 
+func (m *MockNoteRepo) GetNoteByIDAndUserID(ctx context.Context, noteID string, userID string) (*models.Note, error) {
+	args := m.Called(ctx, noteID, userID)
+	note, _ := args.Get(0).(*models.Note)
+	return note, args.Error(1)
+}
+
 func (m *MockNoteRepo) GetNoteByID(ctx context.Context, noteID string) (*models.Note, error) {
 	args := m.Called(ctx, noteID)
 	note, _ := args.Get(0).(*models.Note)
@@ -97,8 +103,8 @@ func TestNoteService_GetNoteByID(t *testing.T) {
 		UserID:  userID,
 	}
 
-	mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(expectedNote, nil)
-
+	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(expectedNote, nil)
+    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(expectedNote, nil)
 	note, err := noteService.GetNoteByID(ctx, userID.String(), noteID.String())
 	assert.NoError(t, err)
 	assert.Equal(t, expectedNote, note)
@@ -157,7 +163,8 @@ func TestNoteService_UpdateNote(t *testing.T) {
 		Content: "Updated Content",
 	}
 
-	mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("UpdateNote", ctx, mock.MatchedBy(func(n *models.Note) bool {
 		return n.Title == input.Title && n.Content == input.Content && n.ID == noteID
 	})).Return(nil)
@@ -183,7 +190,8 @@ func TestNoteService_DeleteNote(t *testing.T) {
 		UserID: userID,
 	}
 
-	mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("DeleteNote", ctx, noteID.String()).Return(nil)
 
 	err := noteService.DeleteNote(ctx, userID.String(), noteID.String())
@@ -215,7 +223,8 @@ func TestNoteService_ArchiveNote(t *testing.T) {
     }
 
     // Мокируем вызовы репозитория
-    mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+    //mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
     mockRepo.On("UpdateNote", ctx, archivedNote).Return(nil)
 
     // Вызываем метод и проверяем, что ошибки нет и заметка вернулась с Archived = true
@@ -245,7 +254,8 @@ func TestNoteService_UpdateMemoryLevel(t *testing.T) {
 		MemoryLevel: 40,
 	}
 
-	mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("UpdateNote", ctx, mock.MatchedBy(func(n *models.Note) bool {
 		return n.ID == noteID && (n.MemoryLevel == 60 || n.MemoryLevel == 0)
 	})).Return(nil)

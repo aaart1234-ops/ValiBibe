@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -40,14 +41,49 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, note.Title, gotNote.Title)
 
-	// --- GetAllNotesByUserID: до архивации ---
-	filter := &models.NoteFilter{
-		UserID:   user.ID.String(),
-	}
-	notes, err := noteRepo.GetAllNotesByUserID(ctx, filter)
+	// --- GetNoteByIDAndUserID (positive) ---
+	gotNoteByUser, err := noteRepo.GetNoteByIDAndUserID(ctx, note.ID.String(), user.ID.String())
 	require.NoError(t, err)
-	assert.Len(t, notes.Notes, 1)
-	assert.Equal(t, "Test Note", notes.Notes[0].Title)
+	assert.Equal(t, note.ID, gotNoteByUser.ID)
+
+	// --- GetNoteByIDAndUserID (wrong user) ---
+	gotNoteWrongUser, err := noteRepo.GetNoteByIDAndUserID(ctx, note.ID.String(), uuid.New().String())
+	require.NoError(t, err)
+	assert.Nil(t, gotNoteWrongUser)
+
+	// --- Bulk create notes ---
+	for i := 1; i <= 5; i++ {
+		n := &models.Note{
+			ID:      uuid.New(),
+			UserID:  user.ID,
+			Title:   fmt.Sprintf("Note %d", i),
+			Content: "bulk content",
+		}
+		require.NoError(t, noteRepo.CreateNote(ctx, n))
+	}
+
+	// --- GetAllNotesByUserID: filter, sort, pagination ---
+	filter := &models.NoteFilter{
+		UserID: user.ID.String(),
+		SortBy: "created_at",
+		Order:  "asc",
+		Limit:  3,
+		Offset: 0,
+	}
+	paginated, err := noteRepo.GetAllNotesByUserID(ctx, filter)
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), paginated.Total)
+	assert.Len(t, paginated.Notes, 3)
+
+	// --- Search ---
+	searchFilter := &models.NoteFilter{
+		UserID: user.ID.String(),
+		Search: "note 3", // case-insensitive
+	}
+	searchResult, err := noteRepo.GetAllNotesByUserID(ctx, searchFilter)
+	require.NoError(t, err)
+	assert.Len(t, searchResult.Notes, 1)
+	assert.Equal(t, "Note 3", searchResult.Notes[0].Title)
 
 	// --- UpdateNote ---
 	note.Title = "Updated Title"
@@ -66,10 +102,13 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, archivedNote.Archived)
 
-	// --- GetAllNotesByUserID: после архивации ---
-	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filter)
+	// --- GetAllNotesByUserID: проверка игнорирования archived ---
+	filterAfterArchive := &models.NoteFilter{UserID: user.ID.String()}
+	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterArchive)
 	require.NoError(t, err)
-	assert.Len(t, notesAfterArchive.Notes, 0)
+	for _, n := range notesAfterArchive.Notes {
+		assert.False(t, n.Archived)
+	}
 
 	// --- DeleteNote ---
 	err = noteRepo.DeleteNote(ctx, note.ID.String())
