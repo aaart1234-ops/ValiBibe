@@ -31,7 +31,7 @@ export const noteApi = createApi({
                 url: '/notes',
                 params: {
                     sort_by: sortBy,
-                    sort_direction: sortDirection,
+                    order: sortDirection,
                     search,
                     limit,
                     offset,
