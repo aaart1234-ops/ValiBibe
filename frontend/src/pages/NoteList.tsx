@@ -204,10 +204,11 @@ const NoteList = () => {
                 </Box>
             )}
 
+
             {/* Пагинация */}
             <Box display="flex" justifyContent="center" alignItems="center" mt={8} gap={2}>
                 <FormControl size="small">
-                    <InputLabel>Показывать</InputLabel>
+                    {/*<InputLabel>Показывать</InputLabel>*/}
                     <Select
                         value={limit}
                         label="Показывать"
@@ -223,14 +224,15 @@ const NoteList = () => {
                     </Select>
                 </FormControl>
 
-                <Pagination
-                    count={Math.ceil(total / limit)}
-                    page={page + 1}
-                    onChange={(_, value) => setPage(value - 1)}
-                    color="primary"
-                />
+                {total > limit && (
+                    <Pagination
+                        count={Math.ceil(total / limit)}
+                        page={page + 1}
+                        onChange={(_, value) => setPage(value - 1)}
+                        color="primary"
+                    />
+                )}
             </Box>
-
             {/* Диалог создания */}
             <NoteCreateDialog
                 open={openCreateDialog}

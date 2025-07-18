@@ -27,7 +27,7 @@ const NoteCard = ({ note }: { note: Note }) => (
             </Box>
             <Box mt="auto">
                 <Typography variant="body2" color="text.secondary">
-                    Уровень запоминания: {note.memoryLevel}%
+                    🧠 Уровень запоминания: {note.memoryLevel}%
                 </Typography>
                 <LinearProgress
                     variant="determinate"

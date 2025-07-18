@@ -1,5 +1,10 @@
-import { useParams } from 'react-router-dom'
-import { useGetNoteQuery, useUpdateNoteMutation } from '@/features/note/noteApi'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+    useGetNoteQuery,
+    useUpdateNoteMutation,
+    useDeleteNoteMutation,
+    useArchiveNoteMutation,
+} from '@/features/note/noteApi'
 import {
     TextField,
     Button,
@@ -9,67 +14,72 @@ import {
     Alert,
     Typography,
     IconButton,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
 } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
 import EditIcon from '@mui/icons-material/Edit'
-import { useAppSelector } from '@/app/hooks'
+import DeleteIcon from '@mui/icons-material/Delete'
+import ArchiveIcon from '@mui/icons-material/Archive'
 
+import { useAppSelector } from '@/app/hooks'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
-import { RichTextEditor } from '@mantine/tiptap'
 import Link from '@tiptap/extension-link'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
+import { RichTextEditor } from '@mantine/tiptap'
+import { useEffect, useRef, useState } from 'react'
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
+    const navigate = useNavigate()
     const { token } = useAppSelector((state) => state.auth)
 
-    const { data: note, isLoading, error, refetch } = useGetNoteQuery(id!, { skip: !id })
+    const [wasDeleted, setWasDeleted] = useState(false)
     const [updateNote, { isLoading: isSaving }] = useUpdateNoteMutation()
+    const [deleteNote] = useDeleteNoteMutation()
+    const [archiveNote] = useArchiveNoteMutation()
 
     const [title, setTitle] = useState('')
     const [isEditing, setIsEditing] = useState(false)
     const [showSuccess, setShowSuccess] = useState(false)
+    const [confirmDialog, setConfirmDialog] = useState<'delete' | 'archive' | null>(null)
+
     const titleRef = useRef<HTMLInputElement>(null)
 
-    // Инициализируем редактор без начального контента, заполним позже
     const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Underline,
-            Link,
-            Highlight,
-            Image,
-        ],
-        content: '', // пустая строка, заполним позже
-        editable: false, // старт не в режиме редактирования
+        extensions: [StarterKit, Underline, Link, Highlight, Image],
+        content: '',
+        editable: false,
     })
 
-    // Когда заметка загружена - обновляем title и содержимое редактора
+    const { data: note, isLoading, error } = useGetNoteQuery(id!, {
+        skip: !id || wasDeleted,
+    })
+
     useEffect(() => {
         if (note && editor) {
             setTitle(note.title)
-            // setContent в редакторе - аккуратно обновляем, не сломать undo stack
             editor.commands.setContent(note.content || '', false)
         }
     }, [note, editor])
 
-    // При переключении режима редактирования меняем доступность редактора
     useEffect(() => {
         if (editor) {
             editor.setEditable(isEditing)
-            if (isEditing) {
-                titleRef.current?.focus()
-            }
+            if (isEditing) titleRef.current?.focus()
         }
     }, [isEditing, editor])
 
-    // При смене токена обновляем заметку с сервера
     useEffect(() => {
-        if (token) refetch()
-    }, [token, refetch])
+        if (wasDeleted) {
+            navigate('/notes')
+        }
+    }, [wasDeleted, navigate])
 
     const handleSubmit = async () => {
         if (!title.trim()) return alert('Введите заголовок')
@@ -85,14 +95,55 @@ const NoteDetailPage = () => {
         }
     }
 
+    const handleDelete = async () => {
+        try {
+            setWasDeleted(true)
+            await deleteNote(note!.id).unwrap()
+        } catch (err) {
+            console.error('Ошибка удаления заметки', err)
+            setWasDeleted(false)
+        }
+    }
+
+    const handleArchive = async () => {
+        try {
+            await archiveNote(note!.id).unwrap()
+            navigate('/notes')
+        } catch (err) {
+            console.error('Ошибка архивирования', err)
+        }
+    }
+
     if (isLoading) return <CircularProgress />
-    if (error || !note) return <div>Ошибка загрузки заметки (не авторизован или заметка не найдена)</div>
+    if (error || !note) return <div>Ошибка загрузки заметки</div>
 
     return (
         <Box display="flex" flexDirection="column" gap={2} p={2}>
             <Snackbar open={showSuccess} autoHideDuration={3000} onClose={() => setShowSuccess(false)}>
                 <Alert severity="success">Заметка сохранена</Alert>
             </Snackbar>
+
+            <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
+                <DialogTitle>
+                    {confirmDialog === 'delete' ? 'Удалить заметку?' : 'Архивировать заметку?'}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        {confirmDialog === 'delete'
+                            ? 'Вы уверены, что хотите удалить эту заметку? Это действие необратимо.'
+                            : 'После архивирования заметка будет скрыта из основного списка.'}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmDialog(null)}>Отмена</Button>
+                    <Button
+                        onClick={confirmDialog === 'delete' ? handleDelete : handleArchive}
+                        color={confirmDialog === 'delete' ? 'error' : 'primary'}
+                    >
+                        Подтвердить
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {!isEditing ? (
                 <Box display="flex" alignItems="center" gap={1}>
@@ -113,7 +164,6 @@ const NoteDetailPage = () => {
 
             {!isEditing ? (
                 <Box sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
-                    {/* Безопасно проверяем редактор */}
                     <div dangerouslySetInnerHTML={{ __html: editor ? editor.getHTML() : '' }} />
                 </Box>
             ) : (
@@ -137,20 +187,35 @@ const NoteDetailPage = () => {
 
             <Box mt={4}>
                 <p>
-                    <strong>Уровень запоминания:</strong> {note.memoryLevel}
-                </p>
-                <p>
-                    <strong>Следующее повторение:</strong> {note.next_review_at}
+                    <strong>🧠 Уровень запоминания:</strong> {note.memoryLevel}
                 </p>
             </Box>
 
-            {isEditing && (
+            {isEditing ? (
                 <Box display="flex" gap={1}>
                     <Button variant="contained" onClick={handleSubmit} disabled={isSaving}>
                         {isSaving ? <CircularProgress size={20} /> : 'Сохранить'}
                     </Button>
                     <Button variant="outlined" onClick={() => setIsEditing(false)}>
                         Отмена
+                    </Button>
+                </Box>
+            ) : (
+                <Box display="flex" gap={1}>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => setConfirmDialog('delete')}
+                    >
+                        Удалить
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        startIcon={<ArchiveIcon />}
+                        onClick={() => setConfirmDialog('archive')}
+                    >
+                        Архивировать
                     </Button>
                 </Box>
             )}
