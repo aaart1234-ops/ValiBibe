@@ -102,8 +102,33 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, archivedNote.Archived)
 
+	// --- UnarchiveNote ---
+    err = noteRepo.UnArchiveNote(ctx, note.ID.String())
+    require.NoError(t, err)
+
+    unarchivedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
+    require.NoError(t, err)
+    assert.False(t, unarchivedNote.Archived)
+
+    filterAfterUnarchive := &models.NoteFilter{UserID: user.ID.String()}
+    notesAfterUnarchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterUnarchive)
+    require.NoError(t, err)
+
+    	found := false
+    	for _, n := range notesAfterUnarchive.Notes {
+    		if n.ID == note.ID {
+    			found = true
+    			break
+    		}
+    	}
+    	assert.True(t, found, "Unarchived note should be returned in GetAllNotesByUserID")
+
+
 	// --- GetAllNotesByUserID: проверка игнорирования archived ---
-	filterAfterArchive := &models.NoteFilter{UserID: user.ID.String()}
+	filterAfterArchive := &models.NoteFilter{
+    	UserID:   user.ID.String(),
+    	Archived: ptr(false), // Фильтрация только по неархивным
+    }
 	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterArchive)
 	require.NoError(t, err)
 	for _, n := range notesAfterArchive.Notes {
@@ -117,5 +142,9 @@ func TestNoteRepository(t *testing.T) {
 	deletedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
 	require.NoError(t, err)
 	assert.Nil(t, deletedNote)
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }
 

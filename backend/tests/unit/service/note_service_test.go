@@ -62,6 +62,11 @@ func (m *MockNoteRepo) ArchiveNote(ctx context.Context, id string) error {
     return args.Error(0)
 }
 
+func (m *MockNoteRepo) UnArchiveNote(ctx context.Context, id string) error {
+    args := m.Called(ctx, id)
+    return args.Error(0)
+}
+
 // ====== Тесты NoteService ======
 
 func TestNoteService_CreateNote(t *testing.T) {
