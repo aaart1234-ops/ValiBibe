@@ -1,11 +1,23 @@
 // NoteCard.tsx
-import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material'
+import { Card, CardContent, Typography, Box, LinearProgress, Chip } from '@mui/material'
 import { Note } from '../noteApi'
 import dayjs from 'dayjs'
 import EventIcon from '@mui/icons-material/Event'
+import ArchiveIcon from '@mui/icons-material/Archive'
 
 const NoteCard = ({ note }: { note: Note }) => (
-    <Card sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+    <Card sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, position: 'relative' }}>
+        {/* Лейбл "В архиве" */}
+        {note.archived && (
+            <Chip
+                icon={<ArchiveIcon />}
+                label="В архиве"
+                size="small"
+                color="default"
+                sx={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                onClick={(e) => e.stopPropagation()}
+            />
+        )}
         <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography
                 variant="h6"

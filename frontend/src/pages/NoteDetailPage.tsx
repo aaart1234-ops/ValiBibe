@@ -4,6 +4,7 @@ import {
     useUpdateNoteMutation,
     useDeleteNoteMutation,
     useArchiveNoteMutation,
+    useUnarchiveNoteMutation,
 } from '@/features/note/noteApi'
 import {
     TextField,
@@ -43,6 +44,7 @@ const NoteDetailPage = () => {
     const [updateNote, { isLoading: isSaving }] = useUpdateNoteMutation()
     const [deleteNote] = useDeleteNoteMutation()
     const [archiveNote] = useArchiveNoteMutation()
+    const [unarchiveNote, { isLoading: isUnarchiving }] = useUnarchiveNoteMutation()
 
     const [title, setTitle] = useState('')
     const [isEditing, setIsEditing] = useState(false)
@@ -210,13 +212,32 @@ const NoteDetailPage = () => {
                     >
                         Удалить
                     </Button>
-                    <Button
-                        variant="outlined"
-                        startIcon={<ArchiveIcon />}
-                        onClick={() => setConfirmDialog('archive')}
-                    >
-                        Архивировать
-                    </Button>
+                    {!note?.archived && (
+                        <Button
+                            variant="outlined"
+                            startIcon={<ArchiveIcon />}
+                            onClick={() => setConfirmDialog('archive')}
+                        >
+                            Архивировать
+                        </Button>
+                    )}
+                    {note?.archived && (
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            onClick={async () => {
+                                try {
+                                    await unarchiveNote(note.id).unwrap()
+                                    navigate('/notes') // или refetch, если ты не хочешь редирект
+                                } catch (e) {
+                                    console.error('Ошибка при разархивировании:', e)
+                                }
+                            }}
+                            disabled={isUnarchiving}
+                        >
+                            {isUnarchiving ? 'Восстановление...' : 'Из архива'}
+                        </Button>
+                    )}
                 </Box>
             )}
         </Box>

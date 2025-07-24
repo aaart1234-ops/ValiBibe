@@ -7,5 +7,6 @@ type NoteFilter struct {
     Order string
     Limit int
     Offset int
+    Archived *bool
 }
 

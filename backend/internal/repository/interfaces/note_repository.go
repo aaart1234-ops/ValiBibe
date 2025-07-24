@@ -13,5 +13,6 @@ type NoteRepository interface {
     GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error)
     UpdateNote(ctx context.Context, note *models.Note) error
     ArchiveNote(ctx context.Context, id string) error
+    UnArchiveNote(ctx context.Context, id string) error
     DeleteNote(ctx context.Context, id string) error
 }

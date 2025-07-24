@@ -7,6 +7,7 @@ export interface Note {
     memoryLevel: number
     created_at: string
     next_review_at?: string
+    archived: boolean
 }
 
 export interface PaginatedNotes {
@@ -26,8 +27,8 @@ export const noteApi = createApi({
         },
     }),
     endpoints: (builder) => ({
-        getNotes: builder.query<PaginatedNotes, { sortBy?: string; sortDirection?: string; search?: string; limit?: number; offset?: number }>({
-            query: ({ sortBy = 'created_at', sortDirection = 'desc', search = '', limit, offset } = {}) => ({
+        getNotes: builder.query<PaginatedNotes, { sortBy?: string; sortDirection?: string; search?: string; limit?: number; offset?: number; archived?: boolean; }>({
+            query: ({ sortBy = 'created_at', sortDirection = 'desc', search = '', limit, offset, archived } = {}) => ({
                 url: '/notes',
                 params: {
                     sort_by: sortBy,
@@ -35,6 +36,7 @@ export const noteApi = createApi({
                     search,
                     limit,
                     offset,
+                    archived
                 },
             }),
             providesTags: (result) =>
@@ -88,6 +90,16 @@ export const noteApi = createApi({
                 { type: 'Note', id: 'LIST' },
             ],
         }),
+        unarchiveNote: builder.mutation<{ success: boolean }, string>({
+            query: ( id ) => ({
+                url: `/notes/${id}/unarchive`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, id) => [
+                { type: 'Note', id },
+                { type: 'Note', id: 'LIST' },
+            ],
+        }),
     }),
 })
 
@@ -98,4 +110,5 @@ export const {
     useCreateNoteMutation,
     useDeleteNoteMutation,
     useArchiveNoteMutation,
+    useUnarchiveNoteMutation,
 } = noteApi

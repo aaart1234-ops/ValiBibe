@@ -87,6 +87,14 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
 
     limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
     offset, _ := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
+    archivedStr := ctx.Query("archived")
+    var archived *bool
+    if archivedStr != "" {
+        parsed, err := strconv.ParseBool(archivedStr)
+        if err == nil {
+            archived = &parsed
+        }
+    }
 
     filter := models.NoteFilter{
         UserID: userID,
@@ -95,6 +103,7 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
         Order:  ctx.DefaultQuery("order", "desc"),
         Limit:  limit,
         Offset: offset,
+        Archived: archived,
     }
 
     result, err := c.noteService.GetAllNotesByUserID(ctx, &filter)
@@ -151,6 +160,28 @@ func (c *NoteController) ArchiveNote(ctx *gin.Context) {
     id := ctx.Param("id")
 
     updatedNote, err := c.noteService.ArchiveNote(ctx, userID, id)  // Теперь возвращает (*models.Note, error)
+    if err != nil {
+        ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    ctx.JSON(http.StatusOK, updatedNote)  // Возвращаем саму заметку
+}
+
+// UnArchiveNote godoc
+// @Summary Разархивировать заметку
+// @Tags notes
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Note ID"
+// @Success 200 {object} models.Note
+// @Failure 500 {object} map[string]string
+// @Router /notes/{id}/unarchive [post]
+func (c *NoteController) UnArchiveNote(ctx *gin.Context) {
+    userID := ctx.MustGet("user_id").(string)
+    id := ctx.Param("id")
+
+    updatedNote, err := c.noteService.UnArchiveNote(ctx, userID, id)  // Теперь возвращает (*models.Note, error)
     if err != nil {
         ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return

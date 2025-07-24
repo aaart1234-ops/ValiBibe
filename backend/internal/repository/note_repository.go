@@ -52,7 +52,11 @@ func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteF
 
 	query := r.db.WithContext(ctx).
 		Model(&models.Note{}).
-		Where("user_id = ? AND archived = false", filter.UserID)
+		Where("user_id = ?", filter.UserID)
+
+	if filter.Archived != nil {
+	    query = query.Where("archived = ?", *filter.Archived)
+	}
 
 	if filter.Search != "" {
 		query = query.Where("LOWER(title) LIKE ?", "%"+strings.ToLower(filter.Search)+"%")
@@ -103,6 +107,13 @@ func (r *NoteRepo) ArchiveNote(ctx context.Context, id string) error {
 		Model(&models.Note{}).
 		Where("id = ?", id).
 		Update("archived", true).Error
+}
+
+func (r *NoteRepo) UnArchiveNote(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).
+		Model(&models.Note{}).
+		Where("id = ?", id).
+		Update("archived", false).Error
 }
 
 func (r *NoteRepo) DeleteNote(ctx context.Context, id string) error {

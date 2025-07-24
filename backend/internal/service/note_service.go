@@ -95,6 +95,25 @@ func (s *NoteService) ArchiveNote(ctx context.Context, userID, noteID string) (*
     return note, nil
 }
 
+func (s *NoteService) UnArchiveNote(ctx context.Context, userID, noteID string) (*models.Note, error) {
+    note, err := s.noteRepo.GetNoteByIDAndUserID(ctx, noteID, userID)
+    if err != nil {
+        return nil, err
+    }
+    if note == nil {
+        return nil, errors.New("note not found or access denied")
+    }
+
+    note.Archived = false
+
+    err = s.noteRepo.UpdateNote(ctx, note)
+    if err != nil {
+        return nil, err
+    }
+
+    return note, nil
+}
+
 func (s *NoteService) DeleteNote(ctx context.Context, userID, noteID string) error {
     note, err := s.noteRepo.GetNoteByIDAndUserID(ctx, noteID, userID)
     if err != nil {

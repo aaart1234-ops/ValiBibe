@@ -79,6 +79,7 @@ func SetupRoutes(r *gin.Engine,
         notes.PUT("/:id", noteController.UpdateNote)
         notes.DELETE("/:id", noteController.DeleteNote)
         notes.POST("/:id/archive", noteController.ArchiveNote)
+        notes.POST("/:id/unarchive", noteController.UnArchiveNote)
         notes.POST("/:id/review", noteController.ReviewNoteHandler)
     }
 }
