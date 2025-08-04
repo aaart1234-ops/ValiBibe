@@ -26,6 +26,9 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ViewModuleIcon from '@mui/icons-material/ViewModule'
 import ViewListIcon from '@mui/icons-material/ViewList'
 import AddIcon from '@mui/icons-material/Add'
+import ArchiveIcon from '@mui/icons-material/Inventory2' // или другой, более подходящий
+import ArchiveOutlinedIcon from '@mui/icons-material/Inventory2Outlined'
+
 
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { toggleViewMode } from '@/features/note/noteSlice'
@@ -33,7 +36,11 @@ import { useGetNotesQuery } from '@/features/note/noteApi'
 
 import NoteCard from '@/features/note/components/NoteCard'
 import NoteRow from '@/features/note/components/NoteRow'
+import SwipeableNoteCard from '@/features/note/components/SwipeableNoteCard'
+import SwipeableNoteRow from '@/features/note/components/SwipeableNoteRow'
 import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 
 const NoteList = () => {
     const dispatch = useAppDispatch()
@@ -64,6 +71,20 @@ const NoteList = () => {
         setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
     }
 
+    const handleToggleArchived = () => {
+        setPage(0)
+        setSearchParams((prev) => {
+            const updated = new URLSearchParams(prev)
+            if (showArchived) {
+                updated.delete('archived')
+            } else {
+                updated.set('archived', 'true')
+            }
+            updated.set('page', '1')
+            return updated
+        })
+    }
+
     const { data, isLoading, isError, refetch } = useGetNotesQuery(
         {
             search: debouncedSearchQuery,
@@ -80,6 +101,9 @@ const NoteList = () => {
 
     const notes = data?.notes || []
     const total = data?.total || 0
+
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
     useEffect(() => {
         if (token) {
@@ -103,79 +127,127 @@ const NoteList = () => {
     if (isError || !notes) return <Typography>Ошибка загрузки заметок</Typography>
 
     return (
-        <Box mt={4} pl={4} pr={4} pb={4}>
+        <Box
+            mt={4}
+            pb={4}
+            sx={{
+                pl: isMobile ? 1 : 4,
+                pr: isMobile ? 1 : 4,
+            }}
+        >
             <Box
                 display="flex"
+                flexDirection="column"
                 justifyContent="space-between"
-                alignItems="center"
-                mb={2}
-                flexWrap="wrap"
-                gap={2}
-            >
-                <Typography variant="h5">Мои заметки</Typography>
+                alignItems="space-between"
+                gap={2} mb={2}>
+                {/* Строка 1: Заголовок */}
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Typography variant="h5">Мои заметки</Typography>
+                </Box>
 
-                <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-                    <TextField
-                        label="Поиск по заголовку"
-                        variant="outlined"
-                        size="small"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-
-                    <FormControl size="small">
-                        <InputLabel id="sort-select-label">Сортировка</InputLabel>
-                        <Select
-                            labelId="sort-select-label"
-                            value={sortBy}
-                            label="Сортировка"
+                <Box
+                    display="flex"
+                    flexDirection={isMobile ? 'column' : 'row'}
+                    alignItems="space-between"
+                    justifyContent="space-between"
+                    gap={0}
+                    flexWrap="wrap"
+                >
+                    {/* Поиск + сортировка */}
+                    <Box
+                        display="flex"
+                        flexDirection="row"
+                        alignItems="space-between"
+                        justifyContent="space-between"
+                        gap={2}
+                        flexWrap="wrap"
+                        flexGrow={1}
+                        minWidth={isMobile ? '100%' : 'auto'}
+                    >
+                        <TextField
+                            label="Поиск по заголовку"
                             variant="outlined"
-                            onChange={(e) => setSortBy(e.target.value as 'created_at' | 'next_review_at')}
+                            size="small"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            sx={{ width: isMobile ? '100%' : 280 }}
+                        />
+
+                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                            <InputLabel id="sort-select-label">Сортировка</InputLabel>
+                            <Select
+                                labelId="sort-select-label"
+                                value={sortBy}
+                                label="Сортировка"
+                                variant="outlined"
+                                onChange={(e) => setSortBy(e.target.value as 'created_at' | 'next_review_at')}
+                            >
+                                <MenuItem value="created_at">По дате создания</MenuItem>
+                                <MenuItem value="next_review_at">По дате следующего повторения</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <Tooltip
+                            title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'}`}
+                            sx={{ backgroundColor: '#e0e0e0' }}
+                            color="primary"
                         >
-                            <MenuItem value="created_at">По дате создания</MenuItem>
-                            <MenuItem value="next_review_at">По дате следующего повторения</MenuItem>
-                        </Select>
-                    </FormControl>
+                            <IconButton onClick={toggleSortDirection}>
+                                {sortDirection === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                            </IconButton>
+                        </Tooltip>
 
-                    <Tooltip title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'}`}>
-                        <IconButton onClick={toggleSortDirection}>
-                            {sortDirection === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
-                        </IconButton>
-                    </Tooltip>
+                        <Tooltip
+                            title={viewMode === 'card' ? 'Список' : 'Карточки'}
+                            sx={{ backgroundColor: '#e0e0e0' }}
+                            color="primary"
+                        >
+                            <IconButton
+                                onClick={() => dispatch(toggleViewMode())}
+                            >
+                                {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
+                            </IconButton>
+                        </Tooltip>
+                   {/* </Box>*/}
 
-                    <Button
-                        variant={showArchived ? 'contained' : 'outlined'}
-                        color="secondary"
-                        onClick={() => {
-                            setPage(0)
-                            setSearchParams((prev) => {
-                                const updated = new URLSearchParams(prev)
-                                if (showArchived) {
-                                    updated.delete('archived')
-                                } else {
-                                    updated.set('archived', 'true')
-                                }
-                                updated.set('page', '1')
-                                return updated
-                            })
-                        }}
-                    >
-                        {showArchived ? 'Показать активные' : 'Показать архив'}
-                    </Button>
+                    {/* Правая часть: архив, вид, добавить */}
+                    {/*<Box display="flex" alignItems="center" gap={1} flexWrap="wrap">*/}
 
-                    <IconButton onClick={() => dispatch(toggleViewMode())}>
-                        {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
-                    </IconButton>
+                        {isMobile ? (
+                            <Tooltip
+                                title={showArchived ? 'Показать активные' : 'Показать архив'}
+                                sx={{ backgroundColor: '#e0e0e0' }}
+                            >
+                                <IconButton color="secondary" onClick={handleToggleArchived}>
+                                    {showArchived ? <ArchiveOutlinedIcon /> : <ArchiveIcon />}
+                                </IconButton>
+                            </Tooltip>
+                        ) : (
+                            <Button
+                                variant={showArchived ? 'contained' : 'outlined'}
+                                color="primary"
+                                onClick={handleToggleArchived}
+                            >
+                                {showArchived ? 'Показать активные' : 'Показать архив'}
+                            </Button>
+                        )}
 
-                    <IconButton
-                        onClick={() => setOpenCreateDialog(true)}
-                        color="primary"
-                        size="large"
-                        sx={{ padding: 2, '&:hover': { backgroundColor: '#e0e0e0' } }}
-                    >
-                        <AddIcon fontSize="large" />
-                    </IconButton>
+                        {!isMobile && (
+                            <IconButton
+                                onClick={() => setOpenCreateDialog(true)}
+                                color="primary"
+                                size="large"
+                                sx={{ padding: 0, '&:hover': { backgroundColor: '#e0e0e0' } }}
+                            >
+                                <AddIcon fontSize="large" />
+                            </IconButton>
+                        )}
+                    </Box>
+                </Box>
 
+                {/* FAB на мобильных */}
+                {isMobile && (
                     <Fab
                         color="primary"
                         onClick={() => setOpenCreateDialog(true)}
@@ -183,7 +255,7 @@ const NoteList = () => {
                     >
                         <AddIcon />
                     </Fab>
-                </Box>
+                )}
             </Box>
 
             {/* Список заметок */}
@@ -200,33 +272,48 @@ const NoteList = () => {
                     </Button>
                 </Box>
             ) : viewMode === 'card' ? (
-                <Grid container spacing={2} justifyContent="start" mt={8}>
+                <Grid container spacing={2} justifyContent="start" mt={4}>
                     {notes.map((note) => (
                         <Grid
                             key={note.id}
                             sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }}
                             display="flex"
                         >
-                            <Link
-                                to={`/notes/${note.id}`}
-                                style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
-                            >
-                                <NoteCard note={note} />
-                            </Link>
+                            {isMobile ? (
+                                <SwipeableNoteCard
+                                    note={note}
+                                    onRefetch={refetch}
+                                />
+                            ) : (
+                                <Link
+                                    to={`/notes/${note.id}`}
+                                    style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
+                                >
+                                    <NoteCard note={note} />
+                                </Link>
+                            )}
                         </Grid>
                     ))}
                 </Grid>
             ) : (
-                <Box>
-                    {notes.map((note) => (
-                        <Link
-                            key={note.id}
-                            to={`/notes/${note.id}`}
-                            style={{ textDecoration: 'none' }}
-                        >
-                            <NoteRow note={note} />
-                        </Link>
-                    ))}
+                <Box mt={4}>
+                    {notes.map((note) =>
+                        isMobile ? (
+                            <SwipeableNoteRow
+                                key={note.id}
+                                note={note}
+                                onRefetch={refetch}
+                            />
+                        ) : (
+                            <Link
+                                key={note.id}
+                                to={`/notes/${note.id}`}
+                                style={{ textDecoration: 'none' }}
+                            >
+                                <NoteRow note={note} />
+                            </Link>
+                        )
+                    )}
                 </Box>
             )}
 
