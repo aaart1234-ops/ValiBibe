@@ -1,3 +1,4 @@
+// features/note/components/SwipeableNoteCard.tsx
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -14,50 +15,51 @@ import {
     SwipeableListItem,
     LeadingActions,
     TrailingActions,
-    SwipeAction
+    SwipeAction,
 } from 'react-swipeable-list'
 import 'react-swipeable-list/dist/styles.css'
 
-import { Note, useArchiveNoteMutation, useDeleteNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
+import { Note, useDeleteNoteMutation } from '../noteApi'
 import NoteCard from './NoteCard'
 
 interface SwipeableNoteCardProps {
     note: Note
-    onRefetch?: () => void
+    onRefetch?: () => any
+    // вызывается когда пользователь хочет архивировать/разархивировать (делегируем NoteList)
+    onArchiveRequest?: (note: Note) => any
+    onUnarchiveRequest?: (note: Note) => any
 }
 
-const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch }) => {
-    const [archiveNote] = useArchiveNoteMutation()
-    const [unarchiveNote] = useUnarchiveNoteMutation()
+const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({
+                                                                 note,
+                                                                 onRefetch,
+                                                                 onArchiveRequest,
+                                                                 onUnarchiveRequest,
+                                                             }) => {
     const [deleteNote] = useDeleteNoteMutation()
-
-    const [confirmDialog, setConfirmDialog] = useState<null | 'delete' | 'archive'>(null)
+    const [confirmDelete, setConfirmDelete] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
 
-    const handleConfirm = async () => {
-        if (isProcessing) return
-        setIsProcessing(true)
-        try {
-            if (confirmDialog === 'delete') {
-                await deleteNote(note.id).unwrap()
-            } else if (confirmDialog === 'archive') {
-                await archiveNote(note.id).unwrap()
-            }
-            onRefetch?.()
-        } catch (e) {
-            console.error('Ошибка при подтверждении действия:', e)
-        } finally {
-            setConfirmDialog(null)
-            setIsProcessing(false)
+    // при свайпе: делегируем архивирование/разархив
+    const handleArchivePress = () => {
+        if (note.archived) {
+            onUnarchiveRequest?.(note)
+        } else {
+            onArchiveRequest?.(note)
         }
     }
 
-    const handleUnarchive = async () => {
+    const handleDelete = async () => {
+        if (isProcessing) return
+        setIsProcessing(true)
         try {
-            await unarchiveNote(note.id).unwrap()
+            await deleteNote(note.id).unwrap()
             onRefetch?.()
         } catch (e) {
-            console.error('Ошибка при разархивировании:', e)
+            console.error('Ошибка при удалении:', e)
+        } finally {
+            setConfirmDelete(false)
+            setIsProcessing(false)
         }
     }
 
@@ -67,13 +69,7 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch }
                 <SwipeableListItem
                     leadingActions={
                         <LeadingActions>
-                            <SwipeAction
-                                onClick={() =>
-                                    note.archived
-                                        ? handleUnarchive()
-                                        : setConfirmDialog('archive')
-                                }
-                            >
+                            <SwipeAction onClick={handleArchivePress}>
                                 <Box
                                     display="flex"
                                     justifyContent="center"
@@ -89,9 +85,7 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch }
                     }
                     trailingActions={
                         <TrailingActions>
-                            <SwipeAction
-                                onClick={() => setConfirmDialog('delete')}
-                            >
+                            <SwipeAction onClick={() => setConfirmDelete(true)}>
                                 <Box
                                     display="flex"
                                     justifyContent="center"
@@ -105,7 +99,7 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch }
                             </SwipeAction>
                         </TrailingActions>
                     }
-                    blockSwipe={!!confirmDialog}
+                    blockSwipe={confirmDelete}
                 >
                     <Link
                         to={`/notes/${note.id}`}
@@ -116,27 +110,20 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch }
                 </SwipeableListItem>
             </SwipeableList>
 
-            <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
-                <DialogTitle>
-                    {confirmDialog === 'delete' ? 'Удалить заметку?' : 'Архивировать заметку?'}
-                </DialogTitle>
+            {/* Диалог подтверждения удаления */}
+            <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+                <DialogTitle>Удалить заметку?</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        {confirmDialog === 'delete'
-                            ? 'Вы уверены, что хотите удалить эту заметку? Это действие необратимо.'
-                            : 'После архивирования заметка будет скрыта из основного списка.'}
+                        Вы уверены, что хотите удалить эту заметку? Это действие необратимо.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmDialog(null)} disabled={isProcessing}>
+                    <Button onClick={() => setConfirmDelete(false)} disabled={isProcessing}>
                         Отмена
                     </Button>
-                    <Button
-                        onClick={handleConfirm}
-                        color={confirmDialog === 'delete' ? 'error' : 'primary'}
-                        disabled={isProcessing}
-                    >
-                        Подтвердить
+                    <Button onClick={handleDelete} color="error" disabled={isProcessing}>
+                        Удалить
                     </Button>
                 </DialogActions>
             </Dialog>

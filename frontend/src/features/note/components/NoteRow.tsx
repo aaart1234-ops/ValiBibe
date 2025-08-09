@@ -11,7 +11,11 @@ import dayjs from 'dayjs'
 import ArchiveIcon from '@mui/icons-material/Archive'
 
 const NoteRow = ({ note }: { note: Note }) => (
-    <Box mb={2}>
+    <Box
+        mb={2}
+        sx={{
+             width: { xs: '100%', sm: '48%', md: '32%' },
+        }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
             <Typography variant="subtitle1" fontWeight={500}>
                 {note.title}

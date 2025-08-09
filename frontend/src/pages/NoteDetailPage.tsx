@@ -11,6 +11,7 @@ import {
     Button,
     CircularProgress,
     Box,
+    Fab,
     Snackbar,
     Alert,
     Typography,
@@ -24,6 +25,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ArchiveIcon from '@mui/icons-material/Archive'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 
 import { useAppSelector } from '@/app/hooks'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -62,6 +64,9 @@ const NoteDetailPage = () => {
     const { data: note, isLoading, error } = useGetNoteQuery(id!, {
         skip: !id || wasDeleted,
     })
+
+    const [showArchiveSnackbar, setShowArchiveSnackbar] = useState(false)
+    const undoRef = useRef(false) // Для отслеживания Undo
 
     useEffect(() => {
         if (note && editor) {
@@ -109,12 +114,31 @@ const NoteDetailPage = () => {
 
     const handleArchive = async () => {
         try {
+            undoRef.current = false
             await archiveNote(note!.id).unwrap()
-            navigate('/notes')
+            setShowArchiveSnackbar(true)
+
+            // Ждем 5 секунд — если не было Undo, уходим
+            setTimeout(() => {
+                if (!undoRef.current) {
+                    navigate('/notes')
+                }
+            }, 5000)
         } catch (err) {
             console.error('Ошибка архивирования', err)
         }
     }
+
+    const handleUndoArchive = async () => {
+        try {
+            undoRef.current = true
+            await unarchiveNote(note!.id).unwrap()
+            setShowArchiveSnackbar(false)
+        } catch (err) {
+            console.error('Ошибка при Undo архивирования', err)
+        }
+    }
+
 
     if (isLoading) return <CircularProgress />
     if (error || !note) return <div>Ошибка загрузки заметки</div>
@@ -124,6 +148,18 @@ const NoteDetailPage = () => {
             <Snackbar open={showSuccess} autoHideDuration={3000} onClose={() => setShowSuccess(false)}>
                 <Alert severity="success">Заметка сохранена</Alert>
             </Snackbar>
+
+            <Snackbar
+                open={showArchiveSnackbar}
+                autoHideDuration={5000}
+                onClose={() => setShowArchiveSnackbar(false)}
+                message="Заметка архивирована"
+                action={
+                    <Button color="secondary" size="small" onClick={handleUndoArchive}>
+                        Отмена
+                    </Button>
+                }
+            />
 
             <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
                 <DialogTitle>
@@ -147,29 +183,31 @@ const NoteDetailPage = () => {
                 </DialogActions>
             </Dialog>
 
-            {!isEditing ? (
-                <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="h5">{title}</Typography>
-                    <IconButton onClick={() => setIsEditing(true)} size="small">
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-            ) : (
-                <TextField
-                    label="Заголовок"
-                    value={title}
-                    inputRef={titleRef}
-                    onChange={(e) => setTitle(e.target.value)}
-                    fullWidth
-                />
-            )}
+            <Box sx={{ pl: 6 }}>
+                {!isEditing ? (
+                    <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="h5">{title}</Typography>
+                        <IconButton onClick={() => setIsEditing(true)} size="small">
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                ) : (
+                    <TextField
+                        label="Заголовок"
+                        value={title}
+                        inputRef={titleRef}
+                        onChange={(e) => setTitle(e.target.value)}
+                        fullWidth
+                    />
+                )}
+            </Box>
 
             {!isEditing ? (
                 <Box sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
                     <div dangerouslySetInnerHTML={{ __html: editor ? editor.getHTML() : '' }} />
                 </Box>
             ) : (
-                <RichTextEditor editor={editor} style={{ minHeight: 200, height: 200 }}>
+                <RichTextEditor editor={editor} style={{ minHeight: 200, height: 'auto', padding: '10px' }}>
                     <RichTextEditor.Toolbar sticky stickyOffset={60}>
                         <RichTextEditor.Bold />
                         <RichTextEditor.Italic />
@@ -216,7 +254,7 @@ const NoteDetailPage = () => {
                         <Button
                             variant="outlined"
                             startIcon={<ArchiveIcon />}
-                            onClick={() => setConfirmDialog('archive')}
+                            onClick={handleArchive}
                         >
                             Архивировать
                         </Button>
@@ -240,6 +278,22 @@ const NoteDetailPage = () => {
                     )}
                 </Box>
             )}
+
+            <Fab
+                color="primary"
+                onClick={() => navigate(-1)}
+                sx={{
+                    position: 'fixed',
+                    top: 76,
+                    left: 12,
+                    zIndex: 1000,
+                    width: 40,
+                    height: 40,
+                }}
+            >
+                <ArrowBackIcon />
+            </Fab>
+
         </Box>
     )
 }
