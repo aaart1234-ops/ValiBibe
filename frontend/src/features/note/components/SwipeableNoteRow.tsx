@@ -19,50 +19,52 @@ import {
 } from 'react-swipeable-list'
 import 'react-swipeable-list/dist/styles.css'
 
-import { Note, useDeleteNoteMutation } from '../noteApi'
+import { Note, useDeleteNoteMutation, useArchiveNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
 import NoteRow from './NoteRow'
 
 interface SwipeableNoteRowProps {
     note: Note
-    onRefetch?: () => any
-    onArchiveRequest?: (note: Note) => any
-    onUnarchiveRequest?: (note: Note) => any
+    onRefetch?: () => void
+    onRequestArchive?: (note: Note) => void
 }
 
-const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
-                                                               note,
-                                                               onRefetch,
-                                                               onArchiveRequest,
-                                                               onUnarchiveRequest,
-                                                           }) => {
+const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({ note, onRefetch, onRequestArchive }) => {
     const [deleteNote] = useDeleteNoteMutation()
+    const [unarchiveNote] = useUnarchiveNoteMutation()
+    // archive is delegated to parent (onRequestArchive) for optimistic + undo
+    // const [archiveNote] = useArchiveNoteMutation() // not used here
+
     const [confirmDialog, setConfirmDialog] = useState<'archive' | 'delete' | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
 
-    const handleArchiveToggle = () => {
-        if (note.archived) {
-            onUnarchiveRequest?.(note)
-        } else {
-            // делегируем запрос архивирования родителю (чтобы он показал snackbar/undo)
-            onArchiveRequest?.(note)
+    const handleConfirm = async () => {
+        setIsProcessing(true)
+        try {
+            if (confirmDialog === 'delete') {
+                await deleteNote(note.id).unwrap()
+            } else if (confirmDialog === 'archive') {
+                // delegate to parent if provided
+                onRequestArchive?.(note)
+            }
+            onRefetch?.()
+        } catch (error) {
+            console.error('Ошибка:', error)
+        } finally {
+            setConfirmDialog(null)
+            setIsProcessing(false)
         }
     }
 
-    const handleDeleteRequest = () => {
-        setConfirmDialog('delete')
-    }
-
-    const handleConfirmDelete = async () => {
-        if (isProcessing) return
-        setIsProcessing(true)
-        try {
-            await deleteNote(note.id).unwrap()
-            onRefetch?.()
-        } catch (e) {
-            console.error('Ошибка при удалении:', e)
-        } finally {
-            setIsProcessing(false)
-            setConfirmDialog(null)
+    const handleArchiveToggle = () => {
+        if (note.archived) {
+            // разархивирование без диалога
+            unarchiveNote(note.id)
+                .unwrap()
+                .then(() => onRefetch?.())
+                .catch((err) => console.error('Ошибка разархивирования:', err))
+        } else {
+            // архивирование — делегируем родителю
+            onRequestArchive?.(note)
         }
     }
 
@@ -91,7 +93,7 @@ const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
                     }
                     trailingActions={
                         <TrailingActions>
-                            <SwipeAction onClick={handleDeleteRequest}>
+                            <SwipeAction onClick={() => setConfirmDialog('delete')}>
                                 <Grid
                                     container
                                     key={note.id}
@@ -108,12 +110,8 @@ const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
                             </SwipeAction>
                         </TrailingActions>
                     }
-                    blockSwipe={!!confirmDialog}
                 >
-                    <Link
-                        to={`/notes/${note.id}`}
-                        style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
-                    >
+                    <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
                         <NoteRow note={note} />
                     </Link>
                 </SwipeableListItem>
@@ -131,15 +129,9 @@ const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmDialog(null)} disabled={isProcessing}>
-                        Отмена
-                    </Button>
-                    <Button
-                        onClick={handleConfirmDelete}
-                        color="error"
-                        disabled={isProcessing}
-                    >
-                        Удалить
+                    <Button onClick={() => setConfirmDialog(null)} disabled={isProcessing}>Отмена</Button>
+                    <Button onClick={handleConfirm} color={confirmDialog === 'delete' ? 'error' : 'primary'} disabled={isProcessing}>
+                        Подтвердить
                     </Button>
                 </DialogActions>
             </Dialog>

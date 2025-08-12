@@ -19,33 +19,29 @@ import {
 } from 'react-swipeable-list'
 import 'react-swipeable-list/dist/styles.css'
 
-import { Note, useDeleteNoteMutation } from '../noteApi'
+import { Note, useDeleteNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
 import NoteCard from './NoteCard'
 
 interface SwipeableNoteCardProps {
     note: Note
-    onRefetch?: () => any
-    // вызывается когда пользователь хочет архивировать/разархивировать (делегируем NoteList)
-    onArchiveRequest?: (note: Note) => any
-    onUnarchiveRequest?: (note: Note) => any
+    onRefetch?: () => void
+    // новый callback: попросить внешний компонент (NoteList) начать процесс архивирования
+    onRequestArchive?: (note: Note) => void
 }
 
-const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({
-                                                                 note,
-                                                                 onRefetch,
-                                                                 onArchiveRequest,
-                                                                 onUnarchiveRequest,
-                                                             }) => {
+const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, onRequestArchive }) => {
     const [deleteNote] = useDeleteNoteMutation()
+    const [unarchiveNote] = useUnarchiveNoteMutation()
+
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
 
-    // при свайпе: делегируем архивирование/разархив
-    const handleArchivePress = () => {
-        if (note.archived) {
-            onUnarchiveRequest?.(note)
-        } else {
-            onArchiveRequest?.(note)
+    const handleUnarchive = async () => {
+        try {
+            await unarchiveNote(note.id).unwrap()
+            onRefetch?.()
+        } catch (e) {
+            console.error('Ошибка при разархивировании:', e)
         }
     }
 
@@ -69,7 +65,11 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({
                 <SwipeableListItem
                     leadingActions={
                         <LeadingActions>
-                            <SwipeAction onClick={handleArchivePress}>
+                            <SwipeAction
+                                onClick={() =>
+                                    note.archived ? handleUnarchive() : onRequestArchive?.(note)
+                                }
+                            >
                                 <Box
                                     display="flex"
                                     justifyContent="center"
@@ -101,16 +101,13 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({
                     }
                     blockSwipe={confirmDelete}
                 >
-                    <Link
-                        to={`/notes/${note.id}`}
-                        style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
-                    >
+                    <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
                         <NoteCard note={note} />
                     </Link>
                 </SwipeableListItem>
             </SwipeableList>
 
-            {/* Диалог подтверждения удаления */}
+            {/* Диалог удаления — без изменений */}
             <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
                 <DialogTitle>Удалить заметку?</DialogTitle>
                 <DialogContent>

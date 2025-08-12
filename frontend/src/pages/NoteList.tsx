@@ -1,5 +1,5 @@
 // components/NoteList.tsx
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useDebounce } from 'use-debounce'
 
@@ -35,7 +35,6 @@ import { toggleViewMode } from '@/features/note/noteSlice'
 import {
     useGetNotesQuery,
     useArchiveNoteMutation,
-    useUnarchiveNoteMutation,
     Note,
 } from '@/features/note/noteApi'
 
@@ -47,7 +46,25 @@ import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 
-const ARCHIVE_DELAY_MS = 4000 // сколько ждать до фактического архивирования (даём время на Undo)
+/**
+ * NoteList: хранит Snackbar/Undo/оптимистичное удаление для архивирования.
+ *
+ * UX:
+ * - при запросе архивирования: заметка скрывается (optimistic), Snackbar появляется.
+ * - если пользователь отменил — заметка возвращается (без обращения к серверу).
+ * - если пользователь не отменил — по таймеру отправляем запрос archiveNote.
+ * - если нет сети / запрос упал — сохраняем действие в localStorage (очередь) и
+ *   пытаемся выполнить позже при событии "online".
+ */
+
+const ACTION_QUEUE_KEY = 'note_action_queue'
+const SNACKBAR_TIMEOUT_MS = 4000
+
+type PendingAction = {
+    type: 'archive'
+    noteId: string
+    createdAt: number
+}
 
 const NoteList: React.FC = () => {
     const dispatch = useAppDispatch()
@@ -56,54 +73,34 @@ const NoteList: React.FC = () => {
     const { token } = useAppSelector((state) => state.auth)
 
     const [searchParams, setSearchParams] = useSearchParams()
+
     const [openCreateDialog, setOpenCreateDialog] = useState(false)
 
-    // Query params
+    // query params
     const showArchived = searchParams.get('archived') === 'true'
     const pageParam = parseInt(searchParams.get('page') || '1', 10)
     const limitParam = parseInt(searchParams.get('limit') || '10', 10)
 
-    // Sorting / filtering / search
+    // фильтры / сортировка / поиск
     const [sortBy, setSortBy] = useState<'created_at' | 'next_review_at'>('created_at')
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
     const [searchQuery, setSearchQuery] = useState('')
     const [debouncedSearchQuery] = useDebounce(searchQuery, 300)
 
-    // Pagination
     const [limit, setLimit] = useState(limitParam)
     const [page, setPage] = useState(pageParam - 1)
     const offset = page * limit
 
-    // Archive / Snackbar / Undo state (moved here)
-    const [archiveNote] = useArchiveNoteMutation()
-    const [unarchiveNote] = useUnarchiveNoteMutation()
-
-    // pendingArchivedIds: скрываем заметки из UI пока ожидается завершение архивирования
-    const [pendingArchivedIds, setPendingArchivedIds] = useState<string[]>([])
-    // lastArchivedNote — заметка, для которой показывается Snackbar (Undo)
-    const [lastArchivedNote, setLastArchivedNote] = useState<Note | null>(null)
+    // optimistic архивация / Snackbar / undo
+    const [optimisticArchivedIds, setOptimisticArchivedIds] = useState<Set<string>>(new Set())
+    const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [snackbarOpen, setSnackbarOpen] = useState(false)
-    // timersRef хранит отложенные таймеры по id заметки
-    const timersRef = useRef<Record<string, ReturnType<typeof setTimeout> | undefined>>({})
+    const [lastArchivedNote, setLastArchivedNote] = useState<Note | null>(null)
 
-    const toggleSortDirection = () => {
-        setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-    }
+    // RTK mutation для фактической архивации
+    const [archiveNote] = useArchiveNoteMutation()
 
-    const handleToggleArchived = () => {
-        setPage(0)
-        setSearchParams((prev) => {
-            const updated = new URLSearchParams(prev)
-            if (showArchived) {
-                updated.delete('archived')
-            } else {
-                updated.set('archived', 'true')
-            }
-            updated.set('page', '1')
-            return updated
-        })
-    }
-
+    // RTK Query получения списка
     const { data, isLoading, isError, refetch } = useGetNotesQuery(
         {
             search: debouncedSearchQuery,
@@ -126,20 +123,8 @@ const NoteList: React.FC = () => {
         if (token) {
             refetch()
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token])
+    }, [token]) // eslint-disable-line
 
-    // Cleanup таймеров при размонтировании
-    useEffect(() => {
-        return () => {
-            Object.values(timersRef.current).forEach((t) => {
-                if (t) clearTimeout(t)
-            })
-            timersRef.current = {}
-        }
-    }, [])
-
-    // Обновление query string при изменении page/limit/archived
     useEffect(() => {
         const params: Record<string, string> = {
             page: (page + 1).toString(),
@@ -147,95 +132,135 @@ const NoteList: React.FC = () => {
         }
         if (showArchived) params.archived = 'true'
         setSearchParams(params, { replace: false })
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, limit, showArchived])
+    }, [page, limit, showArchived]) // eslint-disable-line
 
-    if (isLoading) return <CircularProgress />
-    if (isError || !notes) return <Typography>Ошибка загрузки заметок</Typography>
+    // ---- localStorage queue helpers ----
+    const getQueue = useCallback((): PendingAction[] => {
+        try {
+            return JSON.parse(localStorage.getItem(ACTION_QUEUE_KEY) || '[]') as PendingAction[]
+        } catch {
+            return []
+        }
+    }, [])
 
-    // --- Archive / Undo handlers (в NoteList, с Snackbar) ---
+    const setQueue = useCallback((q: PendingAction[]) => {
+        localStorage.setItem(ACTION_QUEUE_KEY, JSON.stringify(q))
+    }, [])
 
-    // Запрос архивирования — вызывается из Swipeable- компонентов
-    const handleRequestArchive = (note: Note) => {
-        // Скрываем заметку из UI сразу (пока ожидаем подтверждение/timeout)
-        setPendingArchivedIds((prev) => (prev.includes(note.id) ? prev : [...prev, note.id]))
+    const pushToQueue = useCallback((action: PendingAction) => {
+        const q = getQueue()
+        q.push(action)
+        setQueue(q)
+    }, [getQueue, setQueue])
 
-        // Показываем snackbar для этой заметки
+    // попытаемся выполнить очередь — вызывается при переходе в online
+    const processQueue = useCallback(async () => {
+        const q = getQueue()
+        if (q.length === 0) return
+
+        const remaining: PendingAction[] = []
+        for (const action of q) {
+            try {
+                if (action.type === 'archive') {
+                    await archiveNote(action.noteId).unwrap()
+                }
+                // если успешен — ничего не добавляем в remaining
+            } catch (err) {
+                // если сеть отсутствует — прекращаем попытки (оставим всё в очереди)
+                if (!navigator.onLine) {
+                    remaining.push(action, ...q.slice(q.indexOf(action) + 1))
+                    break
+                } else {
+                    // если другая ошибка — оставляем действие, чтобы попробовать позже
+                    remaining.push(action)
+                }
+            }
+        }
+        setQueue(remaining)
+        if (remaining.length === 0) {
+            // обновим UI
+            refetch()
+        }
+    }, [archiveNote, getQueue, setQueue, refetch])
+
+    useEffect(() => {
+        // при появлении сети — пытаемся обработать очередь
+        const onOnline = () => {
+            processQueue().catch((e) => console.error('processQueue error', e))
+        }
+        window.addEventListener('online', onOnline)
+        return () => window.removeEventListener('online', onOnline)
+    }, [processQueue])
+
+    // ---- archive request flow (from child Swipeable components) ----
+    const handleRequestArchive = useCallback((note: Note) => {
+        // пометим как оптимистично удалённую и покажем snackbar
+        setOptimisticArchivedIds((prev) => {
+            const next = new Set(prev)
+            next.add(note.id)
+            return next
+        })
         setLastArchivedNote(note)
         setSnackbarOpen(true)
 
-        // Создаём таймер — через ARCHIVE_DELAY_MS выполняем реальную мутацию
-        const timer = setTimeout(async () => {
+        // если уже был таймер — очистим
+        if (undoTimerRef.current) {
+            clearTimeout(undoTimerRef.current)
+            undoTimerRef.current = null
+        }
+
+        // запланируем реальную архивацию через SNACKBAR_TIMEOUT_MS
+        undoTimerRef.current = setTimeout(async () => {
             try {
+                // попытаемся сразу архивировать
                 await archiveNote(note.id).unwrap()
-                // перезапросим список
+                // после успеха — обновим список
                 refetch()
-            } catch (e) {
-                console.error('Ошибка при архивировании:', e)
+            } catch (err) {
+                // если офлайн или ошибка — положим в очередь для поздней синхронизации
+                pushToQueue({
+                    type: 'archive',
+                    noteId: note.id,
+                    createdAt: Date.now(),
+                })
             } finally {
-                // убираем pending id и очистим таймер
-                setPendingArchivedIds((prev) => prev.filter((id) => id !== note.id))
-                delete timersRef.current[note.id]
-                // если это была последняя отображаемая snackbar-заметка — очищаем
-                setLastArchivedNote((curr) => (curr?.id === note.id ? null : curr))
+                // очистим оптимистичные метки и последний note
+                setOptimisticArchivedIds((prev) => {
+                    const next = new Set(prev)
+                    next.delete(note.id)
+                    return next
+                })
+                setLastArchivedNote(null)
+                setSnackbarOpen(false)
+                undoTimerRef.current = null
             }
-        }, ARCHIVE_DELAY_MS)
+        }, SNACKBAR_TIMEOUT_MS)
+    }, [archiveNote, refetch, pushToQueue])
 
-        timersRef.current[note.id] = timer
-    }
-
-    // Если нужно срочно разархивировать (например свайп вправо по уже заархивированной заметке)
-    const handleRequestUnarchive = async (note: Note) => {
-        try {
-            await unarchiveNote(note.id).unwrap()
-            await refetch()
-        } catch (e) {
-            console.error('Ошибка при разархивировании:', e)
+    const handleUndo = useCallback(async () => {
+        // отменяем запланированную архивацию
+        if (undoTimerRef.current) {
+            clearTimeout(undoTimerRef.current)
+            undoTimerRef.current = null
         }
-    }
+        // возвращаем заметку в UI
+        setOptimisticArchivedIds((prev) => {
+            const next = new Set(prev)
+            if (lastArchivedNote) next.delete(lastArchivedNote.id)
+            return next
+        })
+        setLastArchivedNote(null)
+        setSnackbarOpen(false)
+    }, [lastArchivedNote])
 
-    // Undo — отменяем отложенное архивирование (если таймер ещё не сработал),
-    // либо если архив уже применён — делаем разархивирование на сервере.
-    const handleUndo = async () => {
-        const note = lastArchivedNote
-        if (!note) {
-            setSnackbarOpen(false)
-            return
-        }
-
-        const timer = timersRef.current[note.id]
-
-        if (timer) {
-            // таймер ещё не сработал — отменяем архивирование
-            clearTimeout(timer)
-            delete timersRef.current[note.id]
-            setPendingArchivedIds((prev) => prev.filter((id) => id !== note.id))
-            setLastArchivedNote(null)
-            setSnackbarOpen(false)
-            // не нужно вызывать API — мы отменили отложенную мутацию
-            return
-        }
-
-        // таймер уже сработал и заметка, возможно, уже заархивирована на сервере
-        try {
-            await unarchiveNote(note.id).unwrap()
-            await refetch()
-        } catch (e) {
-            console.error('Ошибка при отмене архивирования (unarchive):', e)
-        } finally {
-            setLastArchivedNote(null)
-            setSnackbarOpen(false)
-        }
-    }
-
-    const handleSnackbarClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+    const handleSnackbarClose = useCallback((_ev?: any, reason?: string) => {
         if (reason === 'clickaway') return
         setSnackbarOpen(false)
-    }
+    }, [])
 
-    // --- Рендер ---
-    // Скрываем заметки, которые находятся в pendingArchivedIds (они визуально "уходят" до завершения архивации)
-    const visibleNotes = notes.filter((n) => !pendingArchivedIds.includes(n.id))
+    // ---- rendering ----
+    if (isLoading) return <CircularProgress />
+    if (isError || !notes) return <Typography>Ошибка загрузки заметок</Typography>
 
     return (
         <Box
@@ -246,8 +271,14 @@ const NoteList: React.FC = () => {
                 pr: isMobile ? 1 : 4,
             }}
         >
-            <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="space-between" gap={2} mb={2}>
-                {/* Заголовок */}
+            <Box
+                display="flex"
+                flexDirection="column"
+                justifyContent="space-between"
+                alignItems="space-between"
+                gap={2}
+                mb={2}
+            >
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="h5">Мои заметки</Typography>
                 </Box>
@@ -260,7 +291,6 @@ const NoteList: React.FC = () => {
                     gap={0}
                     flexWrap="wrap"
                 >
-                    {/* Поиск + сортировка */}
                     <Box
                         display="flex"
                         flexDirection="row"
@@ -294,63 +324,55 @@ const NoteList: React.FC = () => {
                             </Select>
                         </FormControl>
 
-                        <Tooltip
-                            title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'}`}
-                            sx={{ backgroundColor: '#e0e0e0' }}
-                            color="primary"
-                        >
-                            <IconButton onClick={toggleSortDirection}>
+                        <Tooltip title={`Сортировать по ${sortDirection === 'asc' ? 'возрастанию' : 'убыванию'}`} sx={{ backgroundColor: '#e0e0e0' }} color="primary">
+                            <IconButton onClick={() => setSortDirection((p) => (p === 'asc' ? 'desc' : 'asc'))}>
                                 {sortDirection === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
                             </IconButton>
                         </Tooltip>
 
-                        <Tooltip
-                            title={viewMode === 'card' ? 'Список' : 'Карточки'}
-                            sx={{ backgroundColor: '#e0e0e0' }}
-                            color="primary"
-                        >
-                            <IconButton
-                                onClick={() => dispatch(toggleViewMode())}
-                            >
+                        <Tooltip title={viewMode === 'card' ? 'Список' : 'Карточки'} sx={{ backgroundColor: '#e0e0e0' }} color="primary">
+                            <IconButton onClick={() => dispatch(toggleViewMode())}>
                                 {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
                             </IconButton>
                         </Tooltip>
-                        {/* </Box>*/}
-
-                        {/* Правая часть: архив, вид, добавить */}
-                        {/*<Box display="flex" alignItems="center" gap={1} flexWrap="wrap">*/}
-
                         {isMobile ? (
-                            <Tooltip
-                                title={showArchived ? 'Показать активные' : 'Показать архив'}
-                                sx={{ backgroundColor: '#e0e0e0' }}
-                            >
-                                <IconButton color="secondary" onClick={handleToggleArchived}>
+                            <Tooltip title={showArchived ? 'Показать активные' : 'Показать архив'} sx={{ backgroundColor: '#e0e0e0' }}>
+                                <IconButton color="secondary" onClick={() => {
+                                    setPage(0)
+                                    setSearchParams((prev) => {
+                                        const updated = new URLSearchParams(prev)
+                                        if (showArchived) updated.delete('archived')
+                                        else updated.set('archived', 'true')
+                                        updated.set('page', '1')
+                                        return updated
+                                    })
+                                }}>
                                     {showArchived ? <ArchiveOutlinedIcon /> : <ArchiveIcon />}
                                 </IconButton>
                             </Tooltip>
                         ) : (
-                            <Button
-                                variant={showArchived ? 'contained' : 'outlined'}
-                                color="primary"
-                                onClick={handleToggleArchived}
-                            >
+                            <Button variant={showArchived ? 'contained' : 'outlined'} color="primary" onClick={() => {
+                                setPage(0)
+                                setSearchParams((prev) => {
+                                    const updated = new URLSearchParams(prev)
+                                    if (showArchived) updated.delete('archived')
+                                    else updated.set('archived', 'true')
+                                    updated.set('page', '1')
+                                    return updated
+                                })
+                            }}>
                                 {showArchived ? 'Показать активные' : 'Показать архив'}
                             </Button>
                         )}
-
-                        {!isMobile && (
-                            <IconButton
-                                onClick={() => setOpenCreateDialog(true)}
-                                color="primary"
-                                size="large"
-                                sx={{ padding: 0, '&:hover': { backgroundColor: '#e0e0e0' } }}
-                            >
-                                <AddIcon fontSize="large" />
-                            </IconButton>
-                        )}
                     </Box>
+
+                    {!isMobile && (
+                        <IconButton onClick={() => setOpenCreateDialog(true)} color="primary" size="large" sx={{ padding: 0, '&:hover': { backgroundColor: '#e0e0e0' } }}>
+                            <AddIcon fontSize="large" />
+                        </IconButton>
+                    )}
                 </Box>
+
 
                 {/* FAB на мобильных */}
                 {isMobile && (
@@ -358,60 +380,48 @@ const NoteList: React.FC = () => {
                         <AddIcon />
                     </Fab>
                 )}
+
             </Box>
 
-            {/* Список заметок */}
-            {visibleNotes.length === 0 ? (
+            {notes.length === 0 ? (
                 <Box textAlign="center" mt={10}>
-                    <Typography variant="h6" gutterBottom>
-                        У вас пока нет заметок
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" mb={2}>
-                        Создайте первую заметку, чтобы начать тренироваться
-                    </Typography>
+                    <Typography variant="h6" gutterBottom>У вас пока нет заметок</Typography>
+                    <Typography variant="body2" color="text.secondary" mb={2}>Создайте первую заметку, чтобы начать тренироваться</Typography>
                     <Button variant="contained" color="primary" component={Link} to="/notes/create">Создать заметку</Button>
                 </Box>
             ) : viewMode === 'card' ? (
                 <Grid container spacing={2} justifyContent="start" mt={4}>
-                    {visibleNotes.map((note) => (
-                        <Grid key={note.id} sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }} display="flex">
-                            {isMobile ? (
-                                // Swipeable компонент теперь должен вызвать onArchiveRequest / onUnarchiveRequest
-                                <SwipeableNoteCard
-                                    note={note}
-                                    onRefetch={refetch}
-                                    onArchiveRequest={handleRequestArchive}
-                                    onUnarchiveRequest={handleRequestUnarchive}
-                                />
-                            ) : (
-                                <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
-                                    <NoteCard note={note} />
-                                </Link>
-                            )}
-                        </Grid>
-                    ))}
+                    {notes
+                        .filter((note) => !optimisticArchivedIds.has(note.id))
+                        .map((note) => (
+                            <Grid key={note.id} sx={{ width: { xs: '100%', sm: '48%', md: '32%' } }} display="flex">
+                                {isMobile ? (
+                                    <SwipeableNoteCard note={note} onRefetch={refetch} onRequestArchive={handleRequestArchive} />
+                                ) : (
+                                    <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
+                                        <NoteCard note={note} />
+                                    </Link>
+                                )}
+                            </Grid>
+                        ))}
                 </Grid>
             ) : (
                 <Box mt={4}>
-                    {visibleNotes.map((note) =>
-                        isMobile ? (
-                            <SwipeableNoteRow
-                                key={note.id}
-                                note={note}
-                                onRefetch={refetch}
-                                onArchiveRequest={handleRequestArchive}
-                                onUnarchiveRequest={handleRequestUnarchive}
-                            />
-                        ) : (
-                            <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
-                                <NoteRow note={note} />
-                            </Link>
-                        )
-                    )}
+                    {notes
+                        .filter((note) => !optimisticArchivedIds.has(note.id))
+                        .map((note) =>
+                            isMobile ? (
+                                <SwipeableNoteRow key={note.id} note={note} onRefetch={refetch} onRequestArchive={handleRequestArchive} />
+                            ) : (
+                                <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none' }}>
+                                    <NoteRow note={note} />
+                                </Link>
+                            )
+                        )}
                 </Box>
             )}
 
-            {/* Пагинация */}
+            {/* Pagination */}
             <Box display="flex" justifyContent="center" alignItems="center" mt={8} gap={2}>
                 <FormControl size="small">
                     <Select
@@ -452,13 +462,16 @@ const NoteList: React.FC = () => {
                 )}
             </Box>
 
-            {/* Диалог создания */}
             <NoteCreateDialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} onCreated={refetch} />
 
-            {/* Snackbar для архивирования (Undo) */}
-            <Snackbar open={snackbarOpen} autoHideDuration={ARCHIVE_DELAY_MS} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+            {/* Snackbar для архивации с Undo */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={SNACKBAR_TIMEOUT_MS}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
                 <Alert
-                    onClose={handleSnackbarClose}
                     severity="info"
                     sx={{ width: '100%' }}
                     action={
@@ -467,7 +480,7 @@ const NoteList: React.FC = () => {
                         </Button>
                     }
                 >
-                    {lastArchivedNote ? `Заметка "${lastArchivedNote.title}" перемещена в архив` : 'Заметка перемещена в архив'}
+                    Заметка перемещена в архив
                 </Alert>
             </Snackbar>
         </Box>
