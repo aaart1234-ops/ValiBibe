@@ -67,6 +67,7 @@ const NoteList: React.FC = () => {
                 isMobile={isMobile}
                 onRequestArchive={handleRequestArchive}
                 onRefetch={refetch}
+                isArchiveView={showArchived}
             />
 
             <NotePagination

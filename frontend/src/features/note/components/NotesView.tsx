@@ -13,6 +13,7 @@ type Props = {
     isMobile: boolean
     onRequestArchive: (note: Note) => void
     onRefetch: () => void
+    isArchiveView: boolean
 }
 
 const NotesView: React.FC<Props> = ({
@@ -21,11 +22,14 @@ const NotesView: React.FC<Props> = ({
                                         isMobile,
                                         onRequestArchive,
                                         onRefetch,
+                                        isArchiveView
                                     }) => {
     if (notes.length === 0) {
         return (
             <Box textAlign="center" mt={10}>
-                <Typography variant="h6" gutterBottom>У вас пока нет заметок</Typography>
+                <Typography variant="h6" gutterBottom>
+                    {isArchiveView ? "В архиве нет заметок" : "У вас пока нет заметок"}
+                </Typography>
                 <Typography variant="body2" color="text.secondary" mb={2}>
                     Создайте первую заметку, чтобы начать тренироваться
                 </Typography>
