@@ -38,6 +38,14 @@ const AppRouter = () => (
                     </RequireAuth>
                 }
             />
+            <Route
+                path="/archive"
+                element={
+                    <RequireAuth>
+                        <NoteList isArchiveView />
+                    </RequireAuth>
+                }
+            />
             {/* другие страницы */}
         </Routes>
     </BrowserRouter>

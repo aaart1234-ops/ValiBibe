@@ -26,13 +26,10 @@ type Props = {
     onToggleSortDirection: () => void
     viewMode: ViewMode
     onToggleViewMode: () => void
-    showArchived: boolean
-    onToggleArchived: () => void
     onOpenCreateDialog: () => void
 }
 
 const NoteFilters: React.FC<Props> = ({
-                                          title = 'Мои заметки',
                                           searchQuery,
                                           onSearchChange,
                                           sortBy,
@@ -41,8 +38,6 @@ const NoteFilters: React.FC<Props> = ({
                                           onToggleSortDirection,
                                           viewMode,
                                           onToggleViewMode,
-                                          showArchived,
-                                          onToggleArchived,
                                           onOpenCreateDialog,
                                       }) => {
     const theme = useTheme()
@@ -51,10 +46,6 @@ const NoteFilters: React.FC<Props> = ({
     return (
         <Box mt={4} mb={2} sx={{ pl: isMobile ? 1 : 4, pr: isMobile ? 1 : 4 }}>
             <Box display="flex" flexDirection="column" gap={2}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h5">{title}</Typography>
-                </Box>
-
                 <Box
                     display="flex"
                     flexDirection={isMobile ? 'column' : 'row'}
@@ -72,7 +63,7 @@ const NoteFilters: React.FC<Props> = ({
                         minWidth={isMobile ? '100%' : 'auto'}
                     >
                         <TextField
-                            label="Поиск по заголовку"
+                            label="Поиск по заметкам"
                             variant="outlined"
                             size="small"
                             value={searchQuery}
@@ -105,22 +96,6 @@ const NoteFilters: React.FC<Props> = ({
                                 {viewMode === 'card' ? <ViewListIcon /> : <ViewModuleIcon />}
                             </IconButton>
                         </Tooltip>
-
-                        {isMobile ? (
-                            <Tooltip title={showArchived ? 'Показать активные' : 'Показать архив'}>
-                                <IconButton color="secondary" onClick={onToggleArchived}>
-                                    {showArchived ? <ArchiveOutlinedIcon /> : <ArchiveIcon />}
-                                </IconButton>
-                            </Tooltip>
-                        ) : (
-                            <Button
-                                variant={showArchived ? 'contained' : 'outlined'}
-                                color="primary"
-                                onClick={onToggleArchived}
-                            >
-                                {showArchived ? 'Показать активные' : 'Показать архив'}
-                            </Button>
-                        )}
                     </Box>
 
                     {!isMobile && (

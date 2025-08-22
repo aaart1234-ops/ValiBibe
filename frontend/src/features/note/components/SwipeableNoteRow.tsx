@@ -1,14 +1,9 @@
-// features/note/components/SwipeableNoteRow.tsx
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-    Grid,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
-    Button,
+    Box,
+    Menu,
+    MenuItem,
 } from '@mui/material'
 import {
     SwipeableList,
@@ -19,54 +14,43 @@ import {
 } from 'react-swipeable-list'
 import 'react-swipeable-list/dist/styles.css'
 
-import { Note, useDeleteNoteMutation, useArchiveNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
+import { Note, useUnarchiveNoteMutation } from '../noteApi'
 import NoteRow from './NoteRow'
+import { useLongPress } from '../hooks/useLongPress'
 
 interface SwipeableNoteRowProps {
     note: Note
     onRefetch?: () => void
     onRequestArchive?: (note: Note) => void
+    onRequestDelete?: (note: Note) => void
 }
 
-const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({ note, onRefetch, onRequestArchive }) => {
-    const [deleteNote] = useDeleteNoteMutation()
+const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
+                                                               note,
+                                                               onRefetch,
+                                                               onRequestArchive,
+                                                               onRequestDelete,
+                                                           }) => {
     const [unarchiveNote] = useUnarchiveNoteMutation()
-    // archive is delegated to parent (onRequestArchive) for optimistic + undo
-    // const [archiveNote] = useArchiveNoteMutation() // not used here
 
-    const [confirmDialog, setConfirmDialog] = useState<'archive' | 'delete' | null>(null)
-    const [isProcessing, setIsProcessing] = useState(false)
+    const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
 
-    const handleConfirm = async () => {
-        setIsProcessing(true)
+    const handleUnarchive = async () => {
         try {
-            if (confirmDialog === 'delete') {
-                await deleteNote(note.id).unwrap()
-            } else if (confirmDialog === 'archive') {
-                // delegate to parent if provided
-                onRequestArchive?.(note)
-            }
+            await unarchiveNote(note.id).unwrap()
             onRefetch?.()
-        } catch (error) {
-            console.error('Ошибка:', error)
-        } finally {
-            setConfirmDialog(null)
-            setIsProcessing(false)
+        } catch (e) {
+            console.error('Ошибка при разархивировании:', e)
         }
     }
 
-    const handleArchiveToggle = () => {
-        if (note.archived) {
-            // разархивирование без диалога
-            unarchiveNote(note.id)
-                .unwrap()
-                .then(() => onRefetch?.())
-                .catch((err) => console.error('Ошибка разархивирования:', err))
-        } else {
-            // архивирование — делегируем родителю
-            onRequestArchive?.(note)
-        }
-    }
+    // long-press хэндлеры
+    const longPressHandlers = useLongPress({
+        onLongPress: (_e, target) => {
+            setMenuAnchor(target)
+        },
+        delay: 600,
+    })
 
     return (
         <>
@@ -74,67 +58,90 @@ const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({ note, onRefetch, on
                 <SwipeableListItem
                     leadingActions={
                         <LeadingActions>
-                            <SwipeAction onClick={handleArchiveToggle}>
-                                <Grid
-                                    container
-                                    key={note.id}
-                                    sx={{
-                                        width: { xs: '100%', sm: '48%', md: '32%' },
-                                        backgroundColor: 'rgb(175, 238, 175)',
-                                    }}
+                            <SwipeAction
+                                onClick={() =>
+                                    note.archived ? handleUnarchive() : onRequestArchive?.(note)
+                                }
+                            >
+                                <Box
                                     display="flex"
-                                    alignItems="center"
                                     justifyContent="center"
+                                    alignItems="center"
+                                    bgcolor="rgb(175, 238, 175)"
+                                    width="100%"
+                                    height="100%"
                                 >
-                                    {note.archived ? 'Извлечь из архива' : 'В архив'}
-                                </Grid>
+                                    {note.archived ? 'Из архива' : 'В архив'}
+                                </Box>
                             </SwipeAction>
                         </LeadingActions>
                     }
                     trailingActions={
                         <TrailingActions>
-                            <SwipeAction onClick={() => setConfirmDialog('delete')}>
-                                <Grid
-                                    container
-                                    key={note.id}
-                                    sx={{
-                                        width: { xs: '100%', sm: '48%', md: '32%' },
-                                        backgroundColor: 'rgb(238, 175, 175)',
-                                    }}
+                            <SwipeAction onClick={() => onRequestDelete?.(note)}>
+                                <Box
                                     display="flex"
-                                    alignItems="center"
                                     justifyContent="center"
+                                    alignItems="center"
+                                    bgcolor="rgb(238, 175, 175)"
+                                    width="100%"
+                                    height="100%"
                                 >
                                     Удалить
-                                </Grid>
+                                </Box>
                             </SwipeAction>
                         </TrailingActions>
                     }
                 >
-                    <Link key={note.id} to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
-                        <NoteRow note={note} />
-                    </Link>
+                    <Box
+                        {...longPressHandlers}
+                        onContextMenu={(e) => e.preventDefault()}
+                        sx={{ display: 'block', width: '100%' }}
+                    >
+                        <Link
+                            to={`/notes/${note.id}`}
+                            style={{ textDecoration: 'none', display: 'block', width: '100%' }}
+                        >
+                            <NoteRow note={note} />
+                        </Link>
+                    </Box>
                 </SwipeableListItem>
             </SwipeableList>
 
-            <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
-                <DialogTitle>
-                    {confirmDialog === 'delete' ? 'Удалить заметку?' : 'Архивировать заметку?'}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        {confirmDialog === 'delete'
-                            ? 'Вы уверены, что хотите удалить эту заметку? Это действие необратимо.'
-                            : 'После архивирования заметка будет скрыта из основного списка.'}
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDialog(null)} disabled={isProcessing}>Отмена</Button>
-                    <Button onClick={handleConfirm} color={confirmDialog === 'delete' ? 'error' : 'primary'} disabled={isProcessing}>
-                        Подтвердить
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            {/* Меню по долгому тапу */}
+            <Menu
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={() => setMenuAnchor(null)}
+            >
+                {note.archived ? (
+                    <MenuItem
+                        onClick={() => {
+                            handleUnarchive()
+                            setMenuAnchor(null)
+                        }}
+                    >
+                        Разархивировать
+                    </MenuItem>
+                ) : (
+                    <MenuItem
+                        onClick={() => {
+                            onRequestArchive?.(note)
+                            setMenuAnchor(null)
+                        }}
+                    >
+                        В архив
+                    </MenuItem>
+                )}
+                <MenuItem
+                    onClick={() => {
+                        onRequestDelete?.(note)
+                        setMenuAnchor(null)
+                    }}
+                >
+                    Удалить
+                </MenuItem>
+            </Menu>
         </>
     )
 }

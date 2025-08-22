@@ -14,19 +14,35 @@ import NotesView from '@/features/note/components/NotesView'
 import NotePagination from '@/features/note/components/NotePagination'
 import UndoSnackbar from '@/features/note/components/UndoSnackbar'
 import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
+import NoteDeleteDialog from '@/features/note/components/NoteDeleteDialog'
 
-const NoteList: React.FC = () => {
+import { Note } from '@/features/note/noteApi'
+
+interface NoteListProps {
+    isArchiveView?: boolean
+}
+
+const NoteList: React.FC<NoteListProps> = ({ isArchiveView = false }) => {
     const dispatch = useAppDispatch()
     const viewMode = useAppSelector((s) => s.notes.viewMode) as 'card' | 'list'
 
     const {
-        notes, total, isLoading, isError, refetch,
-        searchQuery, setSearchQuery,
-        sortBy, setSortBy,
-        sortDirection, setSortDirection,
-        showArchived, toggleArchived,
-        page, setPage,
-        limit, setLimit,
+        notes,
+        total,
+        isLoading,
+        isError,
+        refetch,
+        searchQuery,
+        setSearchQuery,
+        sortBy,
+        setSortBy,
+        sortDirection,
+        setSortDirection,
+        showArchived, // используем для пустого состояния
+        page,
+        setPage,
+        limit,
+        setLimit,
     } = useNotesQuery()
 
     const {
@@ -35,12 +51,17 @@ const NoteList: React.FC = () => {
         handleSnackbarClose,
         handleRequestArchive,
         handleUndo,
-        autoHideDuration
+        autoHideDuration,
     } = useArchiveWithUndo({ onCommitted: refetch })
 
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
     const [openCreateDialog, setOpenCreateDialog] = useState(false)
+
+    // Диалог удаления
+    const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
+
+    const filteredNotes = notes.filter((n) => (isArchiveView ? n.archived : !n.archived))
 
     if (isLoading) return <CircularProgress />
     if (isError) return <Typography>Ошибка загрузки заметок</Typography>
@@ -53,38 +74,53 @@ const NoteList: React.FC = () => {
                 sortBy={sortBy}
                 onSortByChange={setSortBy}
                 sortDirection={sortDirection}
-                onToggleSortDirection={() => setSortDirection(p => p === 'asc' ? 'desc' : 'asc')}
+                onToggleSortDirection={() => setSortDirection((p) => (p === 'asc' ? 'desc' : 'asc'))}
                 viewMode={viewMode}
                 onToggleViewMode={() => dispatch(toggleViewMode())}
-                showArchived={showArchived}
-                onToggleArchived={toggleArchived}
                 onOpenCreateDialog={() => setOpenCreateDialog(true)}
             />
 
             <NotesView
-                notes={notes.filter(n => !optimisticArchivedIds.has(n.id))}
+                notes={notes
+                    .filter((n) => (isArchiveView ? n.archived : !n.archived))
+                    .filter((n) => !optimisticArchivedIds.has(n.id))}
                 viewMode={viewMode}
                 isMobile={isMobile}
                 onRequestArchive={handleRequestArchive}
+                onRequestDelete={(note) => setNoteToDelete(note)}
                 onRefetch={refetch}
                 isArchiveView={showArchived}
             />
 
             <NotePagination
-                total={total}
+                total={filteredNotes.length || total}
                 limit={limit}
                 page={page}
-                onLimitChange={(newLimit) => { setLimit(newLimit); setPage(0) }}
+                onLimitChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setPage(0)
+                }}
                 onPageChange={(newPage) => setPage(newPage)}
             />
 
-            <NoteCreateDialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} onCreated={refetch} />
+            <NoteCreateDialog
+                open={openCreateDialog}
+                onClose={() => setOpenCreateDialog(false)}
+                onCreated={refetch}
+            />
 
             <UndoSnackbar
                 open={snackbarOpen}
                 autoHideDuration={autoHideDuration}
                 onClose={handleSnackbarClose}
                 onUndo={handleUndo}
+            />
+
+            <NoteDeleteDialog
+                note={noteToDelete}
+                open={!!noteToDelete}
+                onClose={() => setNoteToDelete(null)}
+                onDeleted={refetch}
             />
         </Box>
     )

@@ -9,6 +9,8 @@ import {
     DialogActions,
     Button,
     Box,
+    Menu,
+    MenuItem,
 } from '@mui/material'
 import {
     SwipeableList,
@@ -21,11 +23,11 @@ import 'react-swipeable-list/dist/styles.css'
 
 import { Note, useDeleteNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
 import NoteCard from './NoteCard'
+import { useLongPress } from '@/features/note/hooks/useLongPress'
 
 interface SwipeableNoteCardProps {
     note: Note
     onRefetch?: () => void
-    // новый callback: попросить внешний компонент (NoteList) начать процесс архивирования
     onRequestArchive?: (note: Note) => void
 }
 
@@ -35,6 +37,9 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
 
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
+
+    // --- состояние для long press меню
+    const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
 
     const handleUnarchive = async () => {
         try {
@@ -58,6 +63,14 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
             setIsProcessing(false)
         }
     }
+
+    // --- long press
+    const longPressHandlers = useLongPress({
+        onLongPress: (_e, target) => {
+            setMenuAnchor(target)   // теперь точно будет HTMLElement
+        },
+        delay: 600,
+    })
 
     return (
         <>
@@ -101,13 +114,47 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
                     }
                     blockSwipe={confirmDelete}
                 >
-                    <Link to={`/notes/${note.id}`} style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}>
-                        <NoteCard note={note} />
-                    </Link>
+                    {/* Оборачиваем Link, чтобы ловить long press */}
+                    <Box
+                        {...longPressHandlers}
+                        onContextMenu={(e) => e.preventDefault()}
+                        sx={{ flexGrow: 1, display: 'flex' }}
+                    >
+                        <Link
+                            to={`/notes/${note.id}`}
+                            style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
+                        >
+                            <NoteCard note={note} />
+                        </Link>
+                    </Box>
                 </SwipeableListItem>
             </SwipeableList>
 
-            {/* Диалог удаления — без изменений */}
+            {/* Контекстное меню по long press */}
+            <Menu
+                anchorEl={menuAnchor}
+                open={Boolean(menuAnchor)}
+                onClose={() => setMenuAnchor(null)}
+            >
+                <MenuItem
+                    onClick={() => {
+                        setMenuAnchor(null)
+                        note.archived ? handleUnarchive() : onRequestArchive?.(note)
+                    }}
+                >
+                    {note.archived ? 'Из архива' : 'В архив'}
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        setMenuAnchor(null)
+                        setConfirmDelete(true)
+                    }}
+                >
+                    Удалить
+                </MenuItem>
+            </Menu>
+
+            {/* Диалог удаления */}
             <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
                 <DialogTitle>Удалить заметку?</DialogTitle>
                 <DialogContent>

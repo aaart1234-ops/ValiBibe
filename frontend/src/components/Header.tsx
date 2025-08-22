@@ -76,6 +76,9 @@ const Header = () => {
                         <ListItemButton onClick={handleNavigation('/notes')}>
                             <ListItemText primary="Заметки" />
                         </ListItemButton>
+                        <ListItemButton onClick={handleNavigation('/archive')}>
+                            <ListItemText primary="Показать архив" />
+                        </ListItemButton>
                         <ListItemButton onClick={handleNavigation('/login')}>
                             <ListItemText primary="Выйти" />
                         </ListItemButton>
