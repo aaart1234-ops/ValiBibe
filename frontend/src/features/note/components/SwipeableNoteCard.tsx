@@ -29,6 +29,7 @@ interface SwipeableNoteCardProps {
     note: Note
     onRefetch?: () => void
     onRequestArchive?: (note: Note) => void
+    onRequestDelete?: (note: Note) => void
 }
 
 const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, onRequestArchive }) => {

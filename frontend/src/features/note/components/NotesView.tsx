@@ -71,14 +71,12 @@ const NotesView: React.FC<Props> = ({
                                 note={note}
                                 onRefetch={onRefetch}
                                 onRequestArchive={onRequestArchive}
-                                onRequestDelete={onRequestDelete}
                             />
                         ) : (
                             <NoteCard
                                 note={note}
                                 isArchiveView={isArchiveView}
                                 onRequestArchive={onRequestArchive}
-                                onRequestDelete={onRequestDelete}
                             />
                         )}
                     </Grid>

@@ -1,10 +1,11 @@
 // pages/NoteList.tsx
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { toggleViewMode } from '@/features/note/noteSlice'
+import { useSearchParams } from 'react-router-dom'
 
 import { useNotesQuery } from '@/features/note/hooks/useNotesQuery'
 import { useArchiveWithUndo } from '@/features/note/hooks/useArchiveWithUndo'
@@ -25,6 +26,21 @@ interface NoteListProps {
 const NoteList: React.FC<NoteListProps> = ({ isArchiveView = false }) => {
     const dispatch = useAppDispatch()
     const viewMode = useAppSelector((s) => s.notes.viewMode) as 'card' | 'list'
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    // синхронизация isArchiveView с URL параметром archived
+    useEffect(() => {
+        setSearchParams((prev) => {
+            const updated = new URLSearchParams(prev)
+            if (isArchiveView) {
+                updated.set('archived', 'true')
+                updated.set('page', '1')
+            } else {
+                updated.delete('archived')
+            }
+            return updated
+        })
+    }, [isArchiveView, setSearchParams])
 
     const {
         notes,
@@ -38,7 +54,6 @@ const NoteList: React.FC<NoteListProps> = ({ isArchiveView = false }) => {
         setSortBy,
         sortDirection,
         setSortDirection,
-        showArchived, // используем для пустого состояния
         page,
         setPage,
         limit,
@@ -61,8 +76,6 @@ const NoteList: React.FC<NoteListProps> = ({ isArchiveView = false }) => {
     // Диалог удаления
     const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
 
-    const filteredNotes = notes.filter((n) => (isArchiveView ? n.archived : !n.archived))
-
     if (isLoading) return <CircularProgress />
     if (isError) return <Typography>Ошибка загрузки заметок</Typography>
 
@@ -81,19 +94,17 @@ const NoteList: React.FC<NoteListProps> = ({ isArchiveView = false }) => {
             />
 
             <NotesView
-                notes={notes
-                    .filter((n) => (isArchiveView ? n.archived : !n.archived))
-                    .filter((n) => !optimisticArchivedIds.has(n.id))}
+                notes={notes.filter((n) => !optimisticArchivedIds.has(n.id))}
                 viewMode={viewMode}
                 isMobile={isMobile}
                 onRequestArchive={handleRequestArchive}
                 onRequestDelete={(note) => setNoteToDelete(note)}
                 onRefetch={refetch}
-                isArchiveView={showArchived}
+                isArchiveView={isArchiveView}
             />
 
             <NotePagination
-                total={filteredNotes.length || total}
+                total={total}
                 limit={limit}
                 page={page}
                 onLimitChange={(newLimit) => {
