@@ -1,57 +1,32 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import {
-    useGetNoteQuery,
-    useUpdateNoteMutation,
-    useDeleteNoteMutation,
-    useArchiveNoteMutation,
-    useUnarchiveNoteMutation,
-} from '@/features/note/noteApi'
-import {
-    TextField,
-    Button,
-    CircularProgress,
-    Box,
-    Fab,
-    Snackbar,
-    Alert,
-    Typography,
-    IconButton,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-} from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import DeleteIcon from '@mui/icons-material/Delete'
-import ArchiveIcon from '@mui/icons-material/Archive'
+import { CircularProgress, Box } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-
 import { useAppSelector } from '@/app/hooks'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
-import { RichTextEditor } from '@mantine/tiptap'
 import { useEffect, useRef, useState } from 'react'
+
+import { useGetNoteQuery } from '@/features/note/noteApi'
+import { useNoteActions } from '@/features/note/hooks/useNoteActions'
+import { NoteTitle } from '@/features/note/components/detail/UI/NoteTitle'
+import { NoteContent } from '@/features/note/components/detail/UI/NoteContent'
+import { NoteActions } from '@/features/note/components/detail/NoteActions'
+import { ConfirmDialog } from '@/features/note/components/detail/ConfirmDialog'
+import { SnackbarSuccess } from '@/features/note/components/detail/SnackbarSuccess'
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { token } = useAppSelector((state) => state.auth)
 
-    const [wasDeleted, setWasDeleted] = useState(false)
-    const [updateNote, { isLoading: isSaving }] = useUpdateNoteMutation()
-    const [deleteNote] = useDeleteNoteMutation()
-    const [archiveNote] = useArchiveNoteMutation()
-    const [unarchiveNote, { isLoading: isUnarchiving }] = useUnarchiveNoteMutation()
-
-    const [title, setTitle] = useState('')
     const [isEditing, setIsEditing] = useState(false)
-    const [showSuccess, setShowSuccess] = useState(false)
+    const [title, setTitle] = useState('')
     const [confirmDialog, setConfirmDialog] = useState<'delete' | 'archive' | null>(null)
+    const [snackbar, setSnackbar] = useState<{ message: string; actionText?: string; onAction?: () => void } | null>(null)
 
     const titleRef = useRef<HTMLInputElement>(null)
 
@@ -61,12 +36,8 @@ const NoteDetailPage = () => {
         editable: false,
     })
 
-    const { data: note, isLoading, error } = useGetNoteQuery(id!, {
-        skip: !id || wasDeleted,
-    })
-
-    const [showArchiveSnackbar, setShowArchiveSnackbar] = useState(false)
-    const undoRef = useRef(false) // Для отслеживания Undo
+    const { data: note, isLoading, error } = useGetNoteQuery(id!, { skip: !id })
+    const { update, remove, archive, unarchive, isSaving, isUnarchiving } = useNoteActions(id!)
 
     useEffect(() => {
         if (note && editor) {
@@ -82,209 +53,74 @@ const NoteDetailPage = () => {
         }
     }, [isEditing, editor])
 
-    useEffect(() => {
-        if (wasDeleted) {
-            navigate('/notes')
-        }
-    }, [wasDeleted, navigate])
-
     const handleSubmit = async () => {
         if (!title.trim()) return alert('Введите заголовок')
         const content = editor?.getHTML() || ''
         if (!content.trim()) return alert('Введите текст заметки')
 
         try {
-            await updateNote({ id: note!.id, title, content }).unwrap()
-            setShowSuccess(true)
+            await update(title, content)
+            setSnackbar({ message: 'Заметка сохранена' })
             setIsEditing(false)
         } catch (err) {
             console.error('Ошибка обновления заметки', err)
         }
     }
 
-    const handleDelete = async () => {
-        try {
-            setWasDeleted(true)
-            await deleteNote(note!.id).unwrap()
-        } catch (err) {
-            console.error('Ошибка удаления заметки', err)
-            setWasDeleted(false)
-        }
-    }
-
-    const handleArchive = async () => {
-        try {
-            undoRef.current = false
-            await archiveNote(note!.id).unwrap()
-            setShowArchiveSnackbar(true)
-
-            // Ждем 5 секунд — если не было Undo, уходим
-            setTimeout(() => {
-                if (!undoRef.current) {
-                    navigate('/notes')
-                }
-            }, 5000)
-        } catch (err) {
-            console.error('Ошибка архивирования', err)
-        }
-    }
-
-    const handleUndoArchive = async () => {
-        try {
-            undoRef.current = true
-            await unarchiveNote(note!.id).unwrap()
-            setShowArchiveSnackbar(false)
-        } catch (err) {
-            console.error('Ошибка при Undo архивирования', err)
-        }
-    }
-
-
     if (isLoading) return <CircularProgress />
     if (error || !note) return <div>Ошибка загрузки заметки</div>
 
     return (
         <Box display="flex" flexDirection="column" gap={2} p={2}>
-            <Snackbar open={showSuccess} autoHideDuration={3000} onClose={() => setShowSuccess(false)}>
-                <Alert severity="success">Заметка сохранена</Alert>
-            </Snackbar>
-
-            <Snackbar
-                open={showArchiveSnackbar}
-                autoHideDuration={5000}
-                onClose={() => setShowArchiveSnackbar(false)}
-                message="Заметка архивирована"
-                action={
-                    <Button color="secondary" size="small" onClick={handleUndoArchive}>
-                        Отмена
-                    </Button>
-                }
+            <SnackbarSuccess
+                open={!!snackbar}
+                message={snackbar?.message || ''}
+                onClose={() => setSnackbar(null)}
+                actionText={snackbar?.actionText}
+                onAction={snackbar?.onAction}
             />
 
-            <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
-                <DialogTitle>
-                    {confirmDialog === 'delete' ? 'Удалить заметку?' : 'Архивировать заметку?'}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        {confirmDialog === 'delete'
-                            ? 'Вы уверены, что хотите удалить эту заметку? Это действие необратимо.'
-                            : 'После архивирования заметка будет скрыта из основного списка.'}
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDialog(null)}>Отмена</Button>
-                    <Button
-                        onClick={confirmDialog === 'delete' ? handleDelete : handleArchive}
-                        color={confirmDialog === 'delete' ? 'error' : 'primary'}
-                    >
-                        Подтвердить
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <ConfirmDialog
+                type={confirmDialog}
+                open={!!confirmDialog}
+                onClose={() => setConfirmDialog(null)}
+                onConfirm={confirmDialog === 'delete' ? remove : archive}
+            />
 
-            <Box sx={{ pl: 6 }}>
-                {!isEditing ? (
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Typography variant="h5">{title}</Typography>
-                        <IconButton onClick={() => setIsEditing(true)} size="small">
-                            <EditIcon fontSize="small" />
-                        </IconButton>
-                    </Box>
-                ) : (
-                    <TextField
-                        label="Заголовок"
-                        value={title}
-                        inputRef={titleRef}
-                        onChange={(e) => setTitle(e.target.value)}
-                        fullWidth
-                    />
-                )}
-            </Box>
+            <NoteTitle
+                title={title}
+                isEditing={isEditing}
+                onChange={setTitle}
+                onEditToggle={setIsEditing}
+                titleRef={titleRef}
+            />
 
-            {!isEditing ? (
-                <Box sx={{ border: '1px solid #ccc', borderRadius: 2, p: 2 }}>
-                    <div dangerouslySetInnerHTML={{ __html: editor ? editor.getHTML() : '' }} />
-                </Box>
-            ) : (
-                <RichTextEditor editor={editor} style={{ minHeight: 200, height: 'auto', padding: '10px' }}>
-                    <RichTextEditor.Toolbar sticky stickyOffset={60}>
-                        <RichTextEditor.Bold />
-                        <RichTextEditor.Italic />
-                        <RichTextEditor.Underline />
-                        <RichTextEditor.H1 />
-                        <RichTextEditor.H2 />
-                        <RichTextEditor.Link />
-                        <RichTextEditor.Highlight />
-                        <RichTextEditor.BulletList />
-                        <RichTextEditor.OrderedList />
-                        <RichTextEditor.Blockquote />
-                        <RichTextEditor.ClearFormatting />
-                    </RichTextEditor.Toolbar>
-                    <EditorContent editor={editor} />
-                </RichTextEditor>
-            )}
+            <NoteContent editor={editor} isEditing={isEditing} />
 
-            <Box mt={4}>
+            <Box mt={0}>
                 <p>
-                    <strong>🧠 Уровень запоминания:</strong> {note.memoryLevel}
+                    <strong>🧠 Уровень запоминания:</strong> {note.memoryLevel} из 100
                 </p>
             </Box>
 
-            {isEditing ? (
-                <Box display="flex" gap={1}>
-                    <Button variant="contained" onClick={handleSubmit} disabled={isSaving}>
-                        {isSaving ? <CircularProgress size={20} /> : 'Сохранить'}
-                    </Button>
-                    <Button variant="outlined" onClick={() => setIsEditing(false)}>
-                        Отмена
-                    </Button>
-                </Box>
-            ) : (
-                <Box display="flex" gap={1}>
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => setConfirmDialog('delete')}
-                    >
-                        Удалить
-                    </Button>
-                    {!note?.archived && (
-                        <Button
-                            variant="outlined"
-                            startIcon={<ArchiveIcon />}
-                            onClick={handleArchive}
-                        >
-                            Архивировать
-                        </Button>
-                    )}
-                    {note?.archived && (
-                        <Button
-                            variant="contained"
-                            color="secondary"
-                            onClick={async () => {
-                                try {
-                                    await unarchiveNote(note.id).unwrap()
-                                    navigate('/notes') // или refetch, если ты не хочешь редирект
-                                } catch (e) {
-                                    console.error('Ошибка при разархивировании:', e)
-                                }
-                            }}
-                            disabled={isUnarchiving}
-                        >
-                            {isUnarchiving ? 'Восстановление...' : 'Из архива'}
-                        </Button>
-                    )}
-                </Box>
-            )}
+            <NoteActions
+                isEditing={isEditing}
+                noteArchived={!!note.archived}
+                isSaving={isSaving}
+                isUnarchiving={isUnarchiving}
+                onSave={handleSubmit}
+                onCancelEdit={() => setIsEditing(false)}
+                onDelete={() => setConfirmDialog('delete')}
+                onArchive={() => setConfirmDialog('archive')}
+                onUnarchive={unarchive}
+            />
 
-            <Fab
+            <Box
                 color="primary"
                 onClick={() => navigate(-1)}
                 sx={{
-                    position: 'fixed',
-                    top: 76,
+                    position: 'absolute',
+                    top: 77,
                     left: 12,
                     zIndex: 1000,
                     width: 40,
@@ -292,8 +128,7 @@ const NoteDetailPage = () => {
                 }}
             >
                 <ArrowBackIcon />
-            </Fab>
-
+            </Box>
         </Box>
     )
 }

@@ -10,12 +10,12 @@ import { useSearchParams } from 'react-router-dom'
 import { useNotesQuery } from '@/features/note/hooks/useNotesQuery'
 import { useArchiveWithUndo } from '@/features/note/hooks/useArchiveWithUndo'
 
-import NoteFilters from '@/features/note/components/NoteFilters'
-import NotesView from '@/features/note/components/NotesView'
-import NotePagination from '@/features/note/components/NotePagination'
-import UndoSnackbar from '@/features/note/components/UndoSnackbar'
-import NoteCreateDialog from '@/features/note/components/NoteCreateDialog'
-import NoteDeleteDialog from '@/features/note/components/NoteDeleteDialog'
+import NoteFilters from '@/features/note/components/list/NoteFilters'
+import NotesView from '@/features/note/components/list/NotesView'
+import NotePagination from '@/features/note/components/list/NotePagination'
+import UndoSnackbar from '@/features/note/components/list/UndoSnackbar'
+import NoteCreateDialog from '@/features/note/components/list/NoteCreateDialog'
+import NoteDeleteDialog from '@/features/note/components/list/NoteDeleteDialog'
 
 import { Note } from '@/features/note/noteApi'
 

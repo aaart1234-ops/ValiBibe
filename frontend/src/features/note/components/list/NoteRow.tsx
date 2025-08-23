@@ -9,7 +9,7 @@ import {
     Menu,
     MenuItem,
 } from '@mui/material'
-import { Note } from '../noteApi'
+import { Note } from '../../noteApi'
 import dayjs from 'dayjs'
 import ArchiveIcon from '@mui/icons-material/Archive'
 import { useLongPress } from '@/features/note/hooks/useLongPress'

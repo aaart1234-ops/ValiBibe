@@ -8,7 +8,7 @@ import {
     DialogActions,
     Button,
 } from '@mui/material'
-import { Note, useDeleteNoteMutation } from '../noteApi'
+import { Note, useDeleteNoteMutation } from '../../noteApi'
 
 interface NoteDeleteDialogProps {
     note: Note | null

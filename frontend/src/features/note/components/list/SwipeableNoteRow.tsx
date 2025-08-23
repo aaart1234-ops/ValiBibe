@@ -1,13 +1,6 @@
-// features/note/components/SwipeableNoteCard.tsx
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
-    Button,
     Box,
     Menu,
     MenuItem,
@@ -21,25 +14,25 @@ import {
 } from 'react-swipeable-list'
 import 'react-swipeable-list/dist/styles.css'
 
-import { Note, useDeleteNoteMutation, useUnarchiveNoteMutation } from '../noteApi'
-import NoteCard from './NoteCard'
-import { useLongPress } from '@/features/note/hooks/useLongPress'
+import { Note, useUnarchiveNoteMutation } from '../../noteApi'
+import NoteRow from './NoteRow'
+import { useLongPress } from '../../hooks/useLongPress'
 
-interface SwipeableNoteCardProps {
+interface SwipeableNoteRowProps {
     note: Note
     onRefetch?: () => void
     onRequestArchive?: (note: Note) => void
     onRequestDelete?: (note: Note) => void
 }
 
-const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, onRequestArchive }) => {
-    const [deleteNote] = useDeleteNoteMutation()
+const SwipeableNoteRow: React.FC<SwipeableNoteRowProps> = ({
+                                                               note,
+                                                               onRefetch,
+                                                               onRequestArchive,
+                                                               onRequestDelete,
+                                                           }) => {
     const [unarchiveNote] = useUnarchiveNoteMutation()
 
-    const [confirmDelete, setConfirmDelete] = useState(false)
-    const [isProcessing, setIsProcessing] = useState(false)
-
-    // --- состояние для long press меню
     const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
 
     const handleUnarchive = async () => {
@@ -51,24 +44,10 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
         }
     }
 
-    const handleDelete = async () => {
-        if (isProcessing) return
-        setIsProcessing(true)
-        try {
-            await deleteNote(note.id).unwrap()
-            onRefetch?.()
-        } catch (e) {
-            console.error('Ошибка при удалении:', e)
-        } finally {
-            setConfirmDelete(false)
-            setIsProcessing(false)
-        }
-    }
-
-    // --- long press
+    // long-press хэндлеры
     const longPressHandlers = useLongPress({
         onLongPress: (_e, target) => {
-            setMenuAnchor(target)   // теперь точно будет HTMLElement
+            setMenuAnchor(target)
         },
         delay: 600,
     })
@@ -99,7 +78,7 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
                     }
                     trailingActions={
                         <TrailingActions>
-                            <SwipeAction onClick={() => setConfirmDelete(true)}>
+                            <SwipeAction onClick={() => onRequestDelete?.(note)}>
                                 <Box
                                     display="flex"
                                     justifyContent="center"
@@ -113,67 +92,58 @@ const SwipeableNoteCard: React.FC<SwipeableNoteCardProps> = ({ note, onRefetch, 
                             </SwipeAction>
                         </TrailingActions>
                     }
-                    blockSwipe={confirmDelete}
                 >
-                    {/* Оборачиваем Link, чтобы ловить long press */}
                     <Box
                         {...longPressHandlers}
                         onContextMenu={(e) => e.preventDefault()}
-                        sx={{ flexGrow: 1, display: 'flex' }}
+                        sx={{ display: 'block', width: '100%' }}
                     >
                         <Link
                             to={`/notes/${note.id}`}
-                            style={{ textDecoration: 'none', flexGrow: 1, display: 'flex' }}
+                            style={{ textDecoration: 'none', display: 'block', width: '100%' }}
                         >
-                            <NoteCard note={note} />
+                            <NoteRow note={note} />
                         </Link>
                     </Box>
                 </SwipeableListItem>
             </SwipeableList>
 
-            {/* Контекстное меню по long press */}
+            {/* Меню по долгому тапу */}
             <Menu
                 anchorEl={menuAnchor}
                 open={Boolean(menuAnchor)}
                 onClose={() => setMenuAnchor(null)}
             >
+                {note.archived ? (
+                    <MenuItem
+                        onClick={() => {
+                            handleUnarchive()
+                            setMenuAnchor(null)
+                        }}
+                    >
+                        Разархивировать
+                    </MenuItem>
+                ) : (
+                    <MenuItem
+                        onClick={() => {
+                            onRequestArchive?.(note)
+                            setMenuAnchor(null)
+                        }}
+                    >
+                        В архив
+                    </MenuItem>
+                )}
                 <MenuItem
                     onClick={() => {
+                        onRequestDelete?.(note)
                         setMenuAnchor(null)
-                        note.archived ? handleUnarchive() : onRequestArchive?.(note)
-                    }}
-                >
-                    {note.archived ? 'Из архива' : 'В архив'}
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        setMenuAnchor(null)
-                        setConfirmDelete(true)
                     }}
                 >
                     Удалить
                 </MenuItem>
             </Menu>
-
-            {/* Диалог удаления */}
-            <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
-                <DialogTitle>Удалить заметку?</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Вы уверены, что хотите удалить эту заметку? Это действие необратимо.
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setConfirmDelete(false)} disabled={isProcessing}>
-                        Отмена
-                    </Button>
-                    <Button onClick={handleDelete} color="error" disabled={isProcessing}>
-                        Удалить
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </>
     )
 }
 
-export default SwipeableNoteCard
+export default SwipeableNoteRow
