@@ -1,85 +1,71 @@
 import React from 'react'
 import {
-    AppBar,
-    Box,
-    Toolbar,
-    Typography,
-    IconButton,
-    Drawer,
-    List,
-    ListItemButton,
-    ListItemText
+    AppBar, Box, Toolbar, Typography, IconButton, Drawer, List, ListItemButton, ListItemText,
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import logo from '../assets/logo.png'
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { useDetailPage } from '@/context/DetailPageContext'
 
 const Header = () => {
     const [drawerOpen, setDrawerOpen] = React.useState(false)
     const navigate = useNavigate()
+    const location = useLocation()
+    const { isEditing, setEditing } = useDetailPage()
 
-    const toggleDrawer = (open: boolean) => () => {
-        setDrawerOpen(open)
-    }
+    const isDetailPage = location.pathname.startsWith('/notes/')
 
-    const handleNavigation = (path: string) => () => {
-        setDrawerOpen(false)
-        navigate(path)
+    const handleBack = () => {
+        if (isDetailPage && isEditing) {
+            // вместо навигации — выходим из режима редактирования
+            setEditing(false)
+        } else {
+            navigate(-1)
+        }
     }
 
     return (
         <>
-            <AppBar position="static">
+            <AppBar position="sticky">
                 <Toolbar>
-                    {/* Логотип */}
-                    <Typography
-                        variant="h6"
-                        component={RouterLink}
-                        to="/"
-                        sx={{
-                            flexGrow: 1,
-                            textDecoration: 'none',
-                            color: 'inherit'
-                        }}
-                    >
-                        {/*<img
-                            src={logo}
-                            alt="Logo"
-                            style={{height: 30, marginRight: 8, marginTop: 10}} // регулируй размер и отступ
-                        />*/}
-                        <b>ValiBibe</b>
-                    </Typography>
-
-                    {/* Иконка бургера */}
-                    <IconButton
-                        edge="end"
-                        color="inherit"
-                        onClick={toggleDrawer(true)}
-                    >
+                    {isDetailPage ? (
+                        <IconButton
+                            edge="start"
+                            color="inherit"
+                            onClick={handleBack}
+                            sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-start' }}
+                        >
+                            <ArrowBackIcon />
+                        </IconButton>
+                    ) : (
+                        <Typography
+                            variant="h6"
+                            component={RouterLink}
+                            to="/"
+                            sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
+                        >
+                            <b>V</b>
+                        </Typography>
+                    )}
+                    <IconButton edge="end" color="inherit" onClick={() => setDrawerOpen(true)}>
                         <MenuIcon />
                     </IconButton>
                 </Toolbar>
             </AppBar>
 
-            {/* Drawer-меню */}
-            <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
-                <Box
-                    sx={{ width: 250 }}
-                    role="presentation"
-                    onClick={toggleDrawer(false)}
-                    onKeyDown={toggleDrawer(false)}
-                >
+            <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+                <Box sx={{ width: 250 }} role="presentation">
                     <List>
-                        <ListItemButton onClick={handleNavigation('/')}>
+                        <ListItemButton onClick={() => navigate('/')}>
                             <ListItemText primary="Главная" />
                         </ListItemButton>
-                        <ListItemButton onClick={handleNavigation('/notes')}>
+                        <ListItemButton onClick={() => navigate('/notes')}>
                             <ListItemText primary="Заметки" />
                         </ListItemButton>
-                        <ListItemButton onClick={handleNavigation('/archive')}>
+                        <ListItemButton onClick={() => navigate('/archive')}>
                             <ListItemText primary="Показать архив" />
                         </ListItemButton>
-                        <ListItemButton onClick={handleNavigation('/login')}>
+                        <ListItemButton onClick={() => navigate('/login')}>
                             <ListItemText primary="Выйти" />
                         </ListItemButton>
                     </List>

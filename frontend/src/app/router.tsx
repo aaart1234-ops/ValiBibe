@@ -1,52 +1,33 @@
-import { BrowserRouter, Routes, Route, useNavigate  } from 'react-router-dom'
-import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import HomePage from '../pages/HomePage'
 import NoteList from '../pages/NoteList'
 import RequireAuth from '../features/auth/components/RequireAuth'
-import Header from '@/components/Header'
 import NoteDetailPage from '../pages/NoteDetailPage'
+import Layout from './Layout'
 
 const AppRouter = () => (
     <BrowserRouter>
-        <Header />
         <Routes>
+            {/* публичные страницы */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* защищённые страницы */}
             <Route
                 path="/"
                 element={
                     <RequireAuth>
-                        <HomePage />
+                        <Layout />
                     </RequireAuth>
                 }
-            />
-            <Route
-                path="/notes"
-                element={
-                    <RequireAuth>
-                        <NoteList />
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/notes/:id"
-                element={
-                    <RequireAuth>
-                        <NoteDetailPage />
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/archive"
-                element={
-                    <RequireAuth>
-                        <NoteList isArchiveView />
-                    </RequireAuth>
-                }
-            />
-            {/* другие страницы */}
+            >
+                <Route index element={<HomePage />} />
+                <Route path="notes" element={<NoteList />} />
+                <Route path="notes/:id" element={<NoteDetailPage />} />
+                <Route path="archive" element={<NoteList isArchiveView />} />
+            </Route>
         </Routes>
     </BrowserRouter>
 )

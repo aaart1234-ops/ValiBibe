@@ -1,7 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { CircularProgress, Box } from '@mui/material'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { useAppSelector } from '@/app/hooks'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -17,13 +15,13 @@ import { NoteContent } from '@/features/note/components/detail/UI/NoteContent'
 import { NoteActions } from '@/features/note/components/detail/NoteActions'
 import { ConfirmDialog } from '@/features/note/components/detail/ConfirmDialog'
 import { SnackbarSuccess } from '@/features/note/components/detail/SnackbarSuccess'
+import { NoteMoreMenu } from '@/features/note/components/detail/UI/NoteMoreMenu'
+import { useDetailPage } from '@/context/DetailPageContext'
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
-    const navigate = useNavigate()
-    const { token } = useAppSelector((state) => state.auth)
+    const { isEditing, setEditing } = useDetailPage()
 
-    const [isEditing, setIsEditing] = useState(false)
     const [title, setTitle] = useState('')
     const [confirmDialog, setConfirmDialog] = useState<'delete' | 'archive' | null>(null)
     const [snackbar, setSnackbar] = useState<{ message: string; actionText?: string; onAction?: () => void } | null>(null)
@@ -38,6 +36,11 @@ const NoteDetailPage = () => {
 
     const { data: note, isLoading, error } = useGetNoteQuery(id!, { skip: !id })
     const { update, remove, archive, unarchive, isSaving, isUnarchiving } = useNoteActions(id!)
+    const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null)
+    const openMore = Boolean(moreAnchorEl)
+
+    const handleOpenMore = (e: React.MouseEvent<HTMLButtonElement>) => setMoreAnchorEl(e.currentTarget)
+    const handleCloseMore = () => setMoreAnchorEl(null)
 
     useEffect(() => {
         if (note && editor) {
@@ -53,15 +56,19 @@ const NoteDetailPage = () => {
         }
     }, [isEditing, editor])
 
+    // При уходе со страницы — точно выходим из режима редактирования
+    useEffect(() => {
+        return () => setEditing(false)
+    }, [setEditing])
+
     const handleSubmit = async () => {
         if (!title.trim()) return alert('Введите заголовок')
         const content = editor?.getHTML() || ''
         if (!content.trim()) return alert('Введите текст заметки')
-
         try {
             await update(title, content)
             setSnackbar({ message: 'Заметка сохранена' })
-            setIsEditing(false)
+            setEditing(false)
         } catch (err) {
             console.error('Ошибка обновления заметки', err)
         }
@@ -91,8 +98,21 @@ const NoteDetailPage = () => {
                 title={title}
                 isEditing={isEditing}
                 onChange={setTitle}
-                onEditToggle={setIsEditing}
+                onEditToggle={setEditing}
                 titleRef={titleRef}
+                onMoreClick={handleOpenMore}
+            />
+
+            <NoteMoreMenu
+                anchorEl={moreAnchorEl}
+                open={openMore}
+                onClose={handleCloseMore}
+                noteArchived={!!note.archived}
+                onArchive={() => setConfirmDialog('archive')}
+                onUnarchive={unarchive}
+                onDelete={() => setConfirmDialog('delete')}
+                onDuplicate={() => console.log('TODO: duplicate')}
+                onMove={() => console.log('TODO: move')}
             />
 
             <NoteContent editor={editor} isEditing={isEditing} />
@@ -109,26 +129,11 @@ const NoteDetailPage = () => {
                 isSaving={isSaving}
                 isUnarchiving={isUnarchiving}
                 onSave={handleSubmit}
-                onCancelEdit={() => setIsEditing(false)}
+                onCancelEdit={() => setEditing(false)}
                 onDelete={() => setConfirmDialog('delete')}
                 onArchive={() => setConfirmDialog('archive')}
                 onUnarchive={unarchive}
             />
-
-            <Box
-                color="primary"
-                onClick={() => navigate(-1)}
-                sx={{
-                    position: 'absolute',
-                    top: 77,
-                    left: 12,
-                    zIndex: 1000,
-                    width: 40,
-                    height: 40,
-                }}
-            >
-                <ArrowBackIcon />
-            </Box>
         </Box>
     )
 }
