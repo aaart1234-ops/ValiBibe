@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { CircularProgress, Box } from '@mui/material'
+import {CircularProgress, Box, Typography} from '@mui/material'
 import { useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Underline from '@tiptap/extension-underline'
@@ -17,6 +17,8 @@ import { ConfirmDialog } from '@/features/note/components/detail/ConfirmDialog'
 import { SnackbarSuccess } from '@/features/note/components/detail/SnackbarSuccess'
 import { NoteMoreMenu } from '@/features/note/components/detail/UI/NoteMoreMenu'
 import { useDetailPage } from '@/context/DetailPageContext'
+import EventIcon from "@mui/icons-material/Event";
+import dayjs from "dayjs";
 
 const NoteDetailPage = () => {
     const { id } = useParams<{ id: string }>()
@@ -120,6 +122,9 @@ const NoteDetailPage = () => {
             <Box mt={0}>
                 <p>
                     <strong>🧠 Уровень запоминания:</strong> {note.memoryLevel} из 100
+                </p>
+                <p>
+                    <strong>🔁 Следующий повтор:</strong> {note.next_review_at}
                 </p>
             </Box>
 

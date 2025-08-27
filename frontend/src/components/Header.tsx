@@ -41,7 +41,7 @@ const Header = () => {
                         <Typography
                             variant="h6"
                             component={RouterLink}
-                            to="/"
+                            to="/notes"
                             sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
                         >
                             <b>V</b>
