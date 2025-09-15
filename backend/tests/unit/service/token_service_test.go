@@ -5,7 +5,7 @@ import (
     "testing"
 	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
-	"my_app_backend/internal/service"
+	"valibibe/internal/service"
 	"github.com/stretchr/testify/assert"
 )
 

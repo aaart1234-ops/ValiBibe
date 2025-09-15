@@ -1,4 +1,4 @@
-package models
+package dto
 
 type NoteFilter struct {
     UserID string

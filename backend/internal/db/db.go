@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"my_app_backend/internal/models"
+	"valibibe/internal/models"
 )
 
 // DB — глобальная переменная для хранения подключения GORM

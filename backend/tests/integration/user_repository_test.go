@@ -6,8 +6,8 @@ import (
     "github.com/google/uuid"
     "github.com/stretchr/testify/assert"
 
-    "my_app_backend/internal/models"
-    "my_app_backend/internal/repository"
+    "valibibe/internal/models"
+    "valibibe/internal/repository"
 )
 
 func TestUserRepository_CreateAndGetUserByID(t *testing.T) {

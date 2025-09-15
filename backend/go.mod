@@ -1,4 +1,4 @@
-module my_app_backend
+module valibibe
 
 go 1.23.6
 

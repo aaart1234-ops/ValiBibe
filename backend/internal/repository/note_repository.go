@@ -6,14 +6,16 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
-	"my_app_backend/internal/models"
+	"valibibe/internal/models"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/repository/interfaces"
 )
 
 type NoteRepo struct {
 	db *gorm.DB
 }
 
-func NewNoteRepository(db *gorm.DB) *NoteRepo {
+func NewNoteRepository(db *gorm.DB) interfaces.NoteRepository {
 	return &NoteRepo{db: db}
 }
 
@@ -44,7 +46,7 @@ func (r *NoteRepo) GetNoteByIDAndUserID(ctx context.Context, id string, userID s
 	return &note, err
 }
 
-func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
+func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error) {
 	var (
 		notes []models.Note
 		total int64
@@ -92,7 +94,7 @@ func (r *NoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteF
 		return nil, err
 	}
 
-	return &models.PaginatedNotes{
+	return &dto.PaginatedNotes{
 		Notes: notes,
 		Total: total,
 	}, nil

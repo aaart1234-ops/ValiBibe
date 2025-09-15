@@ -6,15 +6,16 @@ import (
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
 
-	"my_app_backend/internal/controller"
-	"my_app_backend/internal/middleware"
-	"my_app_backend/internal/service"
+	"valibibe/internal/controller"
+	"valibibe/internal/middleware"
+	"valibibe/internal/service"
 )
 
 func SetupRoutes(r *gin.Engine,
                     tokenService service.TokenService,
                     authController *controller.AuthController,
                     noteController *controller.NoteController,
+                    folderController *controller.FolderController,
                 ) {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -81,5 +82,15 @@ func SetupRoutes(r *gin.Engine,
         notes.POST("/:id/archive", noteController.ArchiveNote)
         notes.POST("/:id/unarchive", noteController.UnArchiveNote)
         notes.POST("/:id/review", noteController.ReviewNoteHandler)
+    }
+
+    // Folders
+    folders := r.Group("/folders")
+    folders.Use(middleware.AuthMiddleware(tokenService))
+    {
+        folders.POST("", folderController.CreateFolder)
+        folders.GET("/tree", folderController.GetFolderTree)
+        folders.PUT("/:id", folderController.UpdateFolder)
+        folders.DELETE("/:id", folderController.DeleteFolder)
     }
 }

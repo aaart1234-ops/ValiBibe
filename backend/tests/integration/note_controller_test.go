@@ -13,11 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/joho/godotenv"
 
-	"my_app_backend/internal/models"
-	"my_app_backend/internal/repository"
-	"my_app_backend/internal/service"
-	"my_app_backend/internal/router"
-	"my_app_backend/internal/controller"
+	"valibibe/internal/models"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/repository"
+	"valibibe/internal/service"
+	"valibibe/internal/router"
+	"valibibe/internal/controller"
 )
 
 func setupNoteControllerTestRouter(t *testing.T) *gin.Engine {
@@ -258,7 +259,7 @@ func TestReviewNoteHandler(t *testing.T) {
 	noteID := noteResp["id"].(string)
 
 	// --- Case 1: Remembered = true ---
-	review := models.ReviewInput{Remembered: true}
+	review := dto.ReviewInput{Remembered: true}
 	reviewJSON, _ := json.Marshal(review)
 	reqReview, _ := http.NewRequest("POST", "/notes/"+noteID+"/review", bytes.NewBuffer(reviewJSON))
 	reqReview.Header.Set("Authorization", "Bearer "+token)
@@ -296,7 +297,7 @@ func TestReviewNoteHandler(t *testing.T) {
     }
 
 	// --- Case 2: Remembered = false ---
-	reviewFalse := models.ReviewInput{Remembered: false}
+	reviewFalse := dto.ReviewInput{Remembered: false}
 	reviewFalseJSON, _ := json.Marshal(reviewFalse)
 	reqReviewFalse, _ := http.NewRequest("POST", "/notes/"+noteID+"/review", bytes.NewBuffer(reviewFalseJSON))
 	reqReviewFalse.Header.Set("Authorization", "Bearer "+token)

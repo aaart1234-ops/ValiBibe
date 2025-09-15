@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
     "github.com/joho/godotenv"
 
-	"my_app_backend/internal/repository"
-	"my_app_backend/internal/service"
-	"my_app_backend/internal/router"
-	"my_app_backend/internal/controller"
+	"valibibe/internal/repository"
+	"valibibe/internal/service"
+	"valibibe/internal/router"
+	"valibibe/internal/controller"
 )
 
 func setupAuthControllerTestRouter(t *testing.T) *gin.Engine {

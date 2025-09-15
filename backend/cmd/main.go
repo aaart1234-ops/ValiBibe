@@ -12,7 +12,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"my_app_backend/internal/bootstrap"
+	"valibibe/internal/bootstrap"
 )
 
 func main() {

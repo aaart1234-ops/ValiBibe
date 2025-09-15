@@ -2,13 +2,13 @@ package bootstrap
 
 import (
 	"github.com/gin-gonic/gin"
-	"my_app_backend/internal/db"
-	"my_app_backend/internal/repository"
-	"my_app_backend/internal/service"
-	"my_app_backend/internal/controller"
-	"my_app_backend/internal/router"
-	"my_app_backend/internal/middleware"
-	_ "my_app_backend/docs"
+	"valibibe/internal/db"
+	"valibibe/internal/repository"
+	"valibibe/internal/service"
+	"valibibe/internal/controller"
+	"valibibe/internal/router"
+	"valibibe/internal/middleware"
+	_ "valibibe/docs"
 )
 
 func InitializeApp() (*gin.Engine, error) {
@@ -19,21 +19,24 @@ func InitializeApp() (*gin.Engine, error) {
 	// Репозитории
 	userRepo := repository.NewUserRepository(database)
 	noteRepo := repository.NewNoteRepository(database)
+	folderRepo := repository.NewFolderRepo(database)
 
 	// Сервисы
 	tokenService := service.NewTokenService()
 	authService := service.NewAuthService(userRepo, tokenService)
 	noteService := service.NewNoteService(noteRepo)
+	folderService := service.NewFolderService(folderRepo)
 
 	// Контроллеры
 	authController := controller.NewAuthController(authService)
 	noteController := controller.NewNoteController(noteService)
+	folderController := controller.NewFolderController(folderService)
 
 	// Инициализация Gin
 	engine := gin.Default()
     engine.Use(middleware.CORSMiddleware())
 	// Роутинг
-	router.SetupRoutes(engine, tokenService, authController, noteController)
+	router.SetupRoutes(engine, tokenService, authController, noteController, folderController)
 
 	return engine, nil
 }

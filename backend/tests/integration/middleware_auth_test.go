@@ -8,9 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"my_app_backend/internal/middleware"
-	"my_app_backend/internal/repository"
-	"my_app_backend/internal/service"
+	"valibibe/internal/middleware"
+	"valibibe/internal/repository"
+	"valibibe/internal/service"
 )
 
 func TestAuthMiddleware(t *testing.T) {

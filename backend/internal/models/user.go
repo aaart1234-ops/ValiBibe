@@ -6,7 +6,7 @@ import (
     "github.com/google/uuid"
     "gorm.io/gorm"
 
-    "my_app_backend/internal/utils"
+    "valibibe/internal/utils"
 )
 
 // User представляет модель пользователя в базе данных.

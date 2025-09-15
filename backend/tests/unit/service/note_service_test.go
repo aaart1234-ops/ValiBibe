@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"my_app_backend/internal/models"
-	"my_app_backend/internal/service"
+	"valibibe/internal/models"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/service"
 )
 
 // MockNoteRepo реализует интерфейс NoteRepository для моков
@@ -35,13 +36,13 @@ func (m *MockNoteRepo) GetNoteByID(ctx context.Context, noteID string) (*models.
 	return note, args.Error(1)
 }
 
-func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
+func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error) {
 	args := m.Called(ctx, filter)
 
     // Безопасно извлекаем PaginatedNotes
-    result, ok := args.Get(0).(*models.PaginatedNotes)
+    result, ok := args.Get(0).(*dto.PaginatedNotes)
     if !ok && args.Get(0) != nil {
-    	return nil, fmt.Errorf("expected *models.PaginatedNotes, got %T", args.Get(0))
+    	return nil, fmt.Errorf("expected *dto.PaginatedNotes, got %T", args.Get(0))
     }
 
     return result, args.Error(1)
@@ -75,7 +76,7 @@ func TestNoteService_CreateNote(t *testing.T) {
 	ctx := context.Background()
 
 	userID := uuid.New()
-	input := &models.NoteInput{
+	input := &dto.NoteInput{
 		Title:   "Test Title",
 		Content: "Test Content",
 	}
@@ -123,7 +124,7 @@ func TestNoteService_GetAllNotesByUserID(t *testing.T) {
 	ctx := context.Background()
 
 	userID := uuid.New().String()
-	filter := &models.NoteFilter{
+	filter := &dto.NoteFilter{
 		UserID: userID,
 		Search: "Note",
 		SortBy: "created_at",
@@ -135,7 +136,7 @@ func TestNoteService_GetAllNotesByUserID(t *testing.T) {
 		{ID: uuid.New(), Title: "Note 2", Content: "Content 2", UserID: uuid.MustParse(userID)},
 	}
 
-	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(&models.PaginatedNotes{
+	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(&dto.PaginatedNotes{
         Notes: notes,
         Total: int64(len(notes)),
     }, nil)
@@ -163,7 +164,7 @@ func TestNoteService_UpdateNote(t *testing.T) {
 		UserID:  userID,
 	}
 
-	input := &models.NoteInput{
+	input := &dto.NoteInput{
 		Title:   "Updated Title",
 		Content: "Updated Content",
 	}

@@ -6,7 +6,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"my_app_backend/internal/models"
+	"valibibe/internal/models"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {

@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 
-	"my_app_backend/internal/models"
-	"my_app_backend/internal/service"
+	"valibibe/internal/models"
+	"valibibe/internal/service"
 )
 
 // Мок UserRepository

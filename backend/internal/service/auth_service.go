@@ -6,8 +6,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"my_app_backend/internal/models"
-	"my_app_backend/internal/repository"
+	"valibibe/internal/models"
+	"valibibe/internal/repository"
 )
 
 // AuthService - интерфейс сервиса аутентификации

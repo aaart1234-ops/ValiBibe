@@ -3,14 +3,15 @@ package interfaces
 import (
 	"context"
 
-	"my_app_backend/internal/models"
+	"valibibe/internal/models"
+	"valibibe/internal/controller/dto"
 )
 
 type NoteRepository interface {
     CreateNote(ctx context.Context, note *models.Note) error
     GetNoteByID(ctx context.Context, id string) (*models.Note, error)
     GetNoteByIDAndUserID(ctx context.Context, noteID string, userID string) (*models.Note, error)
-    GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error)
+    GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error)
     UpdateNote(ctx context.Context, note *models.Note) error
     ArchiveNote(ctx context.Context, id string) error
     UnArchiveNote(ctx context.Context, id string) error

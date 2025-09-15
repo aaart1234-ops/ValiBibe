@@ -1,7 +1,7 @@
 package repository
 
 import (
-    "my_app_backend/internal/models"
+    "valibibe/internal/models"
     "gorm.io/gorm"
 )
 

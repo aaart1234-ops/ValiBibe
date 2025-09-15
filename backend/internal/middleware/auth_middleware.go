@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"my_app_backend/internal/service"
+	"valibibe/internal/service"
 )
 
 // AuthMiddleware принимает TokenService и проверяет JWT

@@ -5,8 +5,8 @@ import (
     "strconv"
 
     "github.com/gin-gonic/gin"
-    "my_app_backend/internal/models"
-    "my_app_backend/internal/service"
+	"valibibe/internal/controller/dto"
+    "valibibe/internal/service"
 )
 
 type NoteController struct {
@@ -23,7 +23,7 @@ func NewNoteController(noteService *service.NoteService) *NoteController {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param note body models.NoteInput true "Данные заметки"
+// @Param note body dto.NoteInput true "Данные заметки"
 // @Success 201 {object} models.Note
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -31,7 +31,7 @@ func NewNoteController(noteService *service.NoteService) *NoteController {
 func (c *NoteController) CreateNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
 
-    var input models.NoteInput
+    var input dto.NoteInput
     if err := ctx.ShouldBindJSON(&input); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -79,7 +79,7 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 // @Param order query string false "Порядок сортировки: asc (по возрастанию), desc (по убыванию)" Enums(asc, desc) default(desc)
 // @Param limit query int false "Максимальное количество записей" minimum(1) default(10)
 // @Param offset query int false "Смещение для пагинации" minimum(0) default(0)
-// @Success 200 {object} models.PaginatedNotes
+// @Success 200 {object} dto.PaginatedNotes
 // @Failure 500 {object} map[string]string
 // @Router /notes [get]
 func (c *NoteController) GetAllNotes(ctx *gin.Context) {
@@ -96,7 +96,7 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
         }
     }
 
-    filter := models.NoteFilter{
+    filter := dto.NoteFilter{
         UserID: userID,
         Search: ctx.Query("search"),
         SortBy: ctx.DefaultQuery("sort_by", "created_at"),
@@ -122,7 +122,7 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Note ID"
-// @Param note body models.NoteInput true "Обновлённые данные заметки"
+// @Param note body dto.NoteInput true "Обновлённые данные заметки"
 // @Success 200 {object} models.Note
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -131,7 +131,7 @@ func (c *NoteController) UpdateNote(ctx *gin.Context) {
     userID := ctx.MustGet("user_id").(string)
     id := ctx.Param("id")
 
-    var input models.NoteInput
+    var input dto.NoteInput
     if err := ctx.ShouldBindJSON(&input); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -219,16 +219,16 @@ func (c *NoteController) DeleteNote(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Note ID"
-// @Param input body models.ReviewInput true "Вспомнил или нет"
+// @Param input body dto.ReviewInput true "Вспомнил или нет"
 // @Success 200 {object} models.Note
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id}/review [post]
 func (c *NoteController) ReviewNoteHandler(ctx *gin.Context) {
-	userID := ctx.GetString("user_id")
+	userID := ctx.MustGet("user_id").(string)
 	noteID := ctx.Param("id")
 
-	var input models.ReviewInput
+	var input dto.ReviewInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return

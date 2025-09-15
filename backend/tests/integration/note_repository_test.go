@@ -9,8 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"my_app_backend/internal/models"
-	"my_app_backend/internal/repository"
+	"valibibe/internal/models"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/repository"
 )
 
 func TestNoteRepository(t *testing.T) {
@@ -63,7 +64,7 @@ func TestNoteRepository(t *testing.T) {
 	}
 
 	// --- GetAllNotesByUserID: filter, sort, pagination ---
-	filter := &models.NoteFilter{
+	filter := &dto.NoteFilter{
 		UserID: user.ID.String(),
 		SortBy: "created_at",
 		Order:  "asc",
@@ -76,7 +77,7 @@ func TestNoteRepository(t *testing.T) {
 	assert.Len(t, paginated.Notes, 3)
 
 	// --- Search ---
-	searchFilter := &models.NoteFilter{
+	searchFilter := &dto.NoteFilter{
 		UserID: user.ID.String(),
 		Search: "note 3", // case-insensitive
 	}
@@ -110,7 +111,7 @@ func TestNoteRepository(t *testing.T) {
     require.NoError(t, err)
     assert.False(t, unarchivedNote.Archived)
 
-    filterAfterUnarchive := &models.NoteFilter{UserID: user.ID.String()}
+    filterAfterUnarchive := &dto.NoteFilter{UserID: user.ID.String()}
     notesAfterUnarchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterUnarchive)
     require.NoError(t, err)
 
@@ -125,7 +126,7 @@ func TestNoteRepository(t *testing.T) {
 
 
 	// --- GetAllNotesByUserID: проверка игнорирования archived ---
-	filterAfterArchive := &models.NoteFilter{
+	filterAfterArchive := &dto.NoteFilter{
     	UserID:   user.ID.String(),
     	Archived: ptr(false), // Фильтрация только по неархивным
     }

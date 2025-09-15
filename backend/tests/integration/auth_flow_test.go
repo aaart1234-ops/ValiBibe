@@ -6,8 +6,8 @@ import (
     "github.com/stretchr/testify/assert"
     "github.com/joho/godotenv"
 
-    "my_app_backend/internal/repository"
-    "my_app_backend/internal/service"
+    "valibibe/internal/repository"
+    "valibibe/internal/service"
 )
 
 func TestAuthService_FullFlow(t *testing.T) {

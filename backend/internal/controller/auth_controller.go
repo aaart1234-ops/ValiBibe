@@ -5,7 +5,7 @@ import (
     "net/http"
 
 	"github.com/gin-gonic/gin"
-	"my_app_backend/internal/service"
+	"valibibe/internal/service"
 )
 
 // AuthController отвечает за обработку запросов, связанных с авторизацией

@@ -7,8 +7,9 @@ import (
     "time"
 
     "github.com/google/uuid"
-    "my_app_backend/internal/models"
-    "my_app_backend/internal/repository/interfaces"
+    "valibibe/internal/models"
+	"valibibe/internal/controller/dto"
+    "valibibe/internal/repository/interfaces"
 )
 
 type NoteService struct {
@@ -19,7 +20,7 @@ func NewNoteService(noteRepo interfaces.NoteRepository) *NoteService {
     return &NoteService{noteRepo: noteRepo}
 }
 
-func (s *NoteService) CreateNote(ctx context.Context, userID string, input *models.NoteInput) (*models.Note, error) {
+func (s *NoteService) CreateNote(ctx context.Context, userID string, input *dto.NoteInput) (*models.Note, error) {
     uid, err := uuid.Parse(userID)
     if err != nil {
         return nil, err
@@ -52,11 +53,11 @@ func (s *NoteService) GetNoteByID(ctx context.Context, userID, noteID string) (*
     return note, nil
 }
 
-func (s *NoteService) GetAllNotesByUserID(ctx context.Context, filter *models.NoteFilter) (*models.PaginatedNotes, error) {
+func (s *NoteService) GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error) {
     return s.noteRepo.GetAllNotesByUserID(ctx, filter)
 }
 
-func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID string, input *models.NoteInput) (*models.Note, error) {
+func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID string, input *dto.NoteInput) (*models.Note, error) {
     note, err := s.noteRepo.GetNoteByIDAndUserID(ctx, noteID, userID)
     if err != nil {
         return nil, err
