@@ -84,7 +84,7 @@ migrate-reset: ## Полный откат всех миграций
 		migrate/migrate \
 		-path=/migrations \
 		-database "$(DB_URL)" \
-		down
+		down -all
 
 ### -----------------------------------------
 ### Go-команды (локальная разработка)

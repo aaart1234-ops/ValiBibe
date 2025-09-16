@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"valibibe/internal/models"
+	//"valibibe/internal/models"
 )
 
 // DB — глобальная переменная для хранения подключения GORM
@@ -44,10 +44,10 @@ func ConnectDB() {
 	fmt.Println("✅ Подключение к БД успешно!")
 
 	// Автоматически создаем таблицы
-	err = db.AutoMigrate(&models.User{})
+	/*err = db.AutoMigrate(&models.User{})
 	if err != nil {
 		log.Fatalf("❌ Ошибка миграции: %v", err)
-	}
+	}*/
 	fmt.Println("✅ Миграции выполнены!")
 
 	// Сохраняем подключение в глобальную переменную
