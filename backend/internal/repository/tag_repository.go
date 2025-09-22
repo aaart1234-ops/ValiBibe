@@ -72,6 +72,16 @@ func (r *tagRepository) Delete(ctx context.Context, userID, tagID uuid.UUID) err
     return result.Error
 }
 
+func (r *tagRepository) ExistsByName(ctx context.Context, userID uuid.UUID, name string) (bool, error) {
+    var count int64
+    err := r.db.WithContext(ctx).
+        Model(&models.Tag{}).
+        Where("user_id = ? AND LOWER(name) = LOWER(?)", userID, name).
+        Count(&count).Error
+
+    return count > 0, err
+}
+
 // ------------------- связи тегов и заметок -------------------
 
 func (r *tagRepository) AttachToNote(ctx context.Context, noteID, tagID uuid.UUID) error {

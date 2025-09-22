@@ -33,9 +33,12 @@ func setupAuthControllerTestRouter(t *testing.T) *gin.Engine {
 	folderRepo := repository.NewFolderRepo(db)
 	folderService := service.NewFolderService(folderRepo)
 	folderController := controller.NewFolderController(folderService)
+	tagRepo := repository.NewTagRepository(db)
+	tagService := service.NewTagService(tagRepo)
+	tagController := controller.NewTagController(tagService)
 
     r := gin.Default()
-    router.SetupRoutes(r, tokenService, authController, noteController, folderController)
+    router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController)
 
     return r
 }

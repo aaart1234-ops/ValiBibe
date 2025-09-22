@@ -13,6 +13,7 @@ type TagRepository interface {
     ListByUser(ctx context.Context, userID uuid.UUID) ([]models.Tag, error)
     Update(ctx context.Context, tag *models.Tag) error
     Delete(ctx context.Context, userID, tagID uuid.UUID) error
+    ExistsByName(ctx context.Context, userID uuid.UUID, name string) (bool, error)
 
     // связи заметок и тегов
     AttachToNote(ctx context.Context, noteID, tagID uuid.UUID) error

@@ -24,6 +24,14 @@ func (s *TagService) CreateTag(ctx context.Context, userID string, input dto.Tag
         return nil, errors.New("invalid userID")
     }
 
+    exists, err := s.repo.ExistsByName(ctx, uid, input.Name)
+    if err != nil {
+        return nil, err
+    }
+    if exists {
+        return nil, errors.New("tag with this name already exists")
+    }
+
     tag := &models.Tag{
         UserID: uid,
         Name:   input.Name,
@@ -71,6 +79,15 @@ func (s *TagService) UpdateTag(ctx context.Context, userID, tagID string, input 
     }
     if tag == nil {
         return nil, errors.New("tag not found")
+    }
+
+    // проверка дубля
+    exists, err := s.repo.ExistsByName(ctx, uid, input.Name)
+    if err != nil {
+        return nil, err
+    }
+    if exists && tag.Name != input.Name { // чтобы не ругалось, если имя не изменилось
+        return nil, errors.New("tag with this name already exists")
     }
 
     tag.Name = input.Name
