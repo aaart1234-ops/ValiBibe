@@ -5,8 +5,7 @@ import (
 
     "github.com/google/uuid"
     "gorm.io/gorm"
-
-    "valibibe/internal/utils"
+     "valibibe/internal/utils"
 )
 
 type Note struct {

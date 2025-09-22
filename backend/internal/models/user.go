@@ -5,8 +5,7 @@ import (
 
     "github.com/google/uuid"
     "gorm.io/gorm"
-
-    "valibibe/internal/utils"
+     "valibibe/internal/utils"
 )
 
 // User представляет модель пользователя в базе данных.
@@ -35,3 +34,4 @@ type LoginRequest struct {
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
     return utils.SetUUIDIfNil(&u.ID)(tx)
 }
+

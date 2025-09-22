@@ -16,6 +16,7 @@ func SetupRoutes(r *gin.Engine,
                     authController *controller.AuthController,
                     noteController *controller.NoteController,
                     folderController *controller.FolderController,
+                    tagController *controller.TagController
                 ) {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -92,5 +93,15 @@ func SetupRoutes(r *gin.Engine,
         folders.GET("/tree", folderController.GetFolderTree)
         folders.PUT("/:id", folderController.UpdateFolder)
         folders.DELETE("/:id", folderController.DeleteFolder)
+    }
+
+    // Tags
+    tags := r.Group("/tags")
+    tags.Use(middleware.AuthMiddleware(tokenService))
+    {
+        tags.POST("", tagController.CreateTag)
+        tags.GET("", tagController.GetTags)
+        tags.PUT("/:id", tagController.UpdateTag)
+        tags.DELETE("/:id", tagController.DeleteTag)
     }
 }

@@ -58,6 +58,20 @@ definitions:
       remembered:
         type: boolean
     type: object
+  dto.TagCreateInput:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  dto.TagUpdateInput:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
   models.Folder:
     properties:
       created_at:
@@ -111,6 +125,17 @@ definitions:
         type: string
       password:
         example: "123456"
+        type: string
+    type: object
+  models.Tag:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      user_id:
         type: string
     type: object
   models.User:
@@ -645,6 +670,175 @@ paths:
       summary: Разархивировать заметку
       tags:
       - notes
+  /tags:
+    get:
+      description: Получает список всех тегов пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Tag'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Список тегов
+      tags:
+      - tags
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новый тег для пользователя
+      parameters:
+      - description: Данные тега
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TagCreateInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Tag'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать тег
+      tags:
+      - tags
+  /tags/{id}:
+    delete:
+      description: Удаляет тег по ID
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Тег удалён
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить тег
+      tags:
+      - tags
+    get:
+      description: Получает тег по ID (если принадлежит пользователю)
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Tag'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить тег
+      tags:
+      - tags
+    put:
+      consumes:
+      - application/json
+      description: Обновляет имя тега по ID
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Новые данные
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TagUpdateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Tag'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить тег
+      tags:
+      - tags
 securityDefinitions:
   BearerAuth:
     description: backend API для проекта
