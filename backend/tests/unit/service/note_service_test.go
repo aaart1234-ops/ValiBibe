@@ -2,15 +2,16 @@ package unit
 
 import (
 	"context"
-	"testing"
 	"fmt"
+	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"valibibe/internal/models"
 	"valibibe/internal/controller/dto"
+	"valibibe/internal/models"
+	"valibibe/internal/repository/interfaces"
 	"valibibe/internal/service"
 )
 
@@ -30,22 +31,16 @@ func (m *MockNoteRepo) GetNoteByIDAndUserID(ctx context.Context, noteID string, 
 	return note, args.Error(1)
 }
 
-func (m *MockNoteRepo) GetNoteByID(ctx context.Context, noteID string) (*models.Note, error) {
-	args := m.Called(ctx, noteID)
-	note, _ := args.Get(0).(*models.Note)
-	return note, args.Error(1)
-}
-
 func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error) {
 	args := m.Called(ctx, filter)
 
-    // Безопасно извлекаем PaginatedNotes
-    result, ok := args.Get(0).(*dto.PaginatedNotes)
-    if !ok && args.Get(0) != nil {
-    	return nil, fmt.Errorf("expected *dto.PaginatedNotes, got %T", args.Get(0))
-    }
+	// Безопасно извлекаем PaginatedNotes
+	result, ok := args.Get(0).(*dto.PaginatedNotes)
+	if !ok && args.Get(0) != nil {
+		return nil, fmt.Errorf("expected *dto.PaginatedNotes, got %T", args.Get(0))
+	}
 
-    return result, args.Error(1)
+	return result, args.Error(1)
 }
 
 func (m *MockNoteRepo) UpdateNote(ctx context.Context, note *models.Note) error {
@@ -59,13 +54,44 @@ func (m *MockNoteRepo) DeleteNote(ctx context.Context, noteID string) error {
 }
 
 func (m *MockNoteRepo) ArchiveNote(ctx context.Context, id string) error {
-    args := m.Called(ctx, id)
-    return args.Error(0)
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 func (m *MockNoteRepo) UnArchiveNote(ctx context.Context, id string) error {
-    args := m.Called(ctx, id)
-    return args.Error(0)
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockNoteRepo) GetNoteByID(ctx context.Context, userID, noteID uuid.UUID) (*models.Note, error) {
+	args := m.Called(ctx, userID, noteID)
+	note, _ := args.Get(0).(*models.Note)
+	return note, args.Error(1)
+}
+
+func (m *MockNoteRepo) UpdateFolder(ctx context.Context, userID, noteID uuid.UUID, folderID *uuid.UUID) error {
+	args := m.Called(ctx, userID, noteID, folderID)
+	return args.Error(0)
+}
+
+func (m *MockNoteRepo) BatchUpdateFolder(ctx context.Context, userID uuid.UUID, noteIDs []uuid.UUID, folderID *uuid.UUID) error {
+	args := m.Called(ctx, userID, noteIDs, folderID)
+	return args.Error(0)
+}
+
+func (m *MockNoteRepo) AddTag(ctx context.Context, noteID, tagID uuid.UUID) error {
+	args := m.Called(ctx, noteID, tagID)
+	return args.Error(0)
+}
+
+func (m *MockNoteRepo) RemoveTag(ctx context.Context, noteID, tagID uuid.UUID) error {
+	args := m.Called(ctx, noteID, tagID)
+	return args.Error(0)
+}
+
+func (m *MockNoteRepo) AddTagsBatch(ctx context.Context, noteTags []interfaces.NoteTag) error {
+	args := m.Called(ctx, noteTags)
+	return args.Error(0)
 }
 
 // ====== Тесты NoteService ======
@@ -110,7 +136,7 @@ func TestNoteService_GetNoteByID(t *testing.T) {
 	}
 
 	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(expectedNote, nil)
-    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(expectedNote, nil)
+	mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(expectedNote, nil)
 	note, err := noteService.GetNoteByID(ctx, userID.String(), noteID.String())
 	assert.NoError(t, err)
 	assert.Equal(t, expectedNote, note)
@@ -137,9 +163,9 @@ func TestNoteService_GetAllNotesByUserID(t *testing.T) {
 	}
 
 	mockRepo.On("GetAllNotesByUserID", ctx, filter).Return(&dto.PaginatedNotes{
-        Notes: notes,
-        Total: int64(len(notes)),
-    }, nil)
+		Notes: notes,
+		Total: int64(len(notes)),
+	}, nil)
 
 	result, err := noteService.GetAllNotesByUserID(ctx, filter)
 	assert.NoError(t, err)
@@ -170,7 +196,7 @@ func TestNoteService_UpdateNote(t *testing.T) {
 	}
 
 	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
-    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
+	mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("UpdateNote", ctx, mock.MatchedBy(func(n *models.Note) bool {
 		return n.Title == input.Title && n.Content == input.Content && n.ID == noteID
 	})).Return(nil)
@@ -197,7 +223,7 @@ func TestNoteService_DeleteNote(t *testing.T) {
 	}
 
 	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
-    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
+	mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("DeleteNote", ctx, noteID.String()).Return(nil)
 
 	err := noteService.DeleteNote(ctx, userID.String(), noteID.String())
@@ -207,43 +233,43 @@ func TestNoteService_DeleteNote(t *testing.T) {
 }
 
 func TestNoteService_ArchiveNote(t *testing.T) {
-    mockRepo := new(MockNoteRepo)
-    noteService := service.NewNoteService(mockRepo)
-    ctx := context.Background()
+	mockRepo := new(MockNoteRepo)
+	noteService := service.NewNoteService(mockRepo)
+	ctx := context.Background()
 
-    userID := uuid.New()
-    noteID := uuid.New()
+	userID := uuid.New()
+	noteID := uuid.New()
 
-    // Исходная заметка (до архивации)
-    note := &models.Note{
-        ID:       noteID,
-        UserID:   userID,
-        Archived: false, // Изначально не архивирована
-    }
+	// Исходная заметка (до архивации)
+	note := &models.Note{
+		ID:       noteID,
+		UserID:   userID,
+		Archived: false, // Изначально не архивирована
+	}
 
-    // Ожидаемая заметка после архивации
-    archivedNote := &models.Note{
-        ID:       noteID,
-        UserID:   userID,
-        Archived: true, // Теперь архивирована
-    }
+	// Ожидаемая заметка после архивации
+	archivedNote := &models.Note{
+		ID:       noteID,
+		UserID:   userID,
+		Archived: true, // Теперь архивирована
+	}
 
-    // Мокируем вызовы репозитория
-    //mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
-    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
-    mockRepo.On("UpdateNote", ctx, archivedNote).Return(nil)
+	// Мокируем вызовы репозитория
+	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
+	mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
+	mockRepo.On("UpdateNote", ctx, archivedNote).Return(nil)
 
-    // Вызываем метод и проверяем, что ошибки нет и заметка вернулась с Archived = true
-    updatedNote, err := noteService.ArchiveNote(ctx, userID.String(), noteID.String())
+	// Вызываем метод и проверяем, что ошибки нет и заметка вернулась с Archived = true
+	updatedNote, err := noteService.ArchiveNote(ctx, userID.String(), noteID.String())
 
-    // Проверки
-    assert.NoError(t, err)
-    assert.NotNil(t, updatedNote)
-    assert.True(t, updatedNote.Archived) // Убеждаемся, что заметка архивирована
-    assert.Equal(t, noteID, updatedNote.ID) // Проверяем, что ID совпадает
+	// Проверки
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedNote)
+	assert.True(t, updatedNote.Archived)    // Убеждаемся, что заметка архивирована
+	assert.Equal(t, noteID, updatedNote.ID) // Проверяем, что ID совпадает
 
-    // Проверяем, что все ожидаемые вызовы репозитория были выполнены
-    mockRepo.AssertExpectations(t)
+	// Проверяем, что все ожидаемые вызовы репозитория были выполнены
+	mockRepo.AssertExpectations(t)
 }
 
 func TestNoteService_UpdateMemoryLevel(t *testing.T) {
@@ -261,7 +287,7 @@ func TestNoteService_UpdateMemoryLevel(t *testing.T) {
 	}
 
 	//mockRepo.On("GetNoteByID", ctx, noteID.String()).Return(note, nil)
-    mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
+	mockRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockRepo.On("UpdateNote", ctx, mock.MatchedBy(func(n *models.Note) bool {
 		return n.ID == noteID && (n.MemoryLevel == 60 || n.MemoryLevel == 0)
 	})).Return(nil)
@@ -280,4 +306,3 @@ func TestNoteService_UpdateMemoryLevel(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
-

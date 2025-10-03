@@ -1,12 +1,13 @@
 package dto
 
 type NoteFilter struct {
-    UserID string
-    Search string
-    SortBy string
-    Order string
-    Limit int
-    Offset int
-    Archived *bool
+	UserID   string
+	Search   string
+	SortBy   string
+	Order    string
+	Limit    int
+	Offset   int
+	Archived *bool
+	FolderID *string
+	TagIDs   []string
 }
-

@@ -1,31 +1,33 @@
 package integration
 
 import (
-    "fmt"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/joho/godotenv"
 
-	"valibibe/internal/models"
-	"valibibe/internal/controller/dto"
-	"valibibe/internal/repository"
-	"valibibe/internal/service"
-	"valibibe/internal/router"
 	"valibibe/internal/controller"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/models"
+	"valibibe/internal/repository"
+	"valibibe/internal/router"
+	"valibibe/internal/service"
 )
 
 func setupNoteControllerTestRouter(t *testing.T) *gin.Engine {
 	err := godotenv.Load("../../../.env")
 	assert.NoError(t, err)
 
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 
 	userRepo := repository.NewUserRepository(db)
 	tokenService := service.NewTokenService()
@@ -34,7 +36,8 @@ func setupNoteControllerTestRouter(t *testing.T) *gin.Engine {
 
 	noteRepo := repository.NewNoteRepository(db)
 	noteService := service.NewNoteService(noteRepo)
-	noteController := controller.NewNoteController(noteService)
+	assignFolderService := service.NewAssignFolderService(noteRepo)
+	noteController := controller.NewNoteController(noteService, assignFolderService)
 
 	folderRepo := repository.NewFolderRepo(db)
 	folderService := service.NewFolderService(folderRepo)
@@ -42,9 +45,11 @@ func setupNoteControllerTestRouter(t *testing.T) *gin.Engine {
 	tagRepo := repository.NewTagRepository(db)
 	tagService := service.NewTagService(tagRepo)
 	tagController := controller.NewTagController(tagService)
+	noteTagService := service.NewNoteTagService(noteRepo, tagRepo)
+	noteTagController := controller.NewNoteTagController(noteTagService)
 
-    r := gin.Default()
-    router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController)
+	r := gin.Default()
+	router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController, noteTagController)
 
 	return r
 }
@@ -204,11 +209,11 @@ func TestNotesListAndUnauthorized(t *testing.T) {
 	assert.Equal(t, 200, wGetAll.Code)
 
 	var paginated struct {
-        Notes []models.Note `json:"notes"`
-    }
-    err := json.Unmarshal(wGetAll.Body.Bytes(), &paginated)
-    require.NoError(t, err)
-    assert.GreaterOrEqual(t, len(paginated.Notes), 3)
+		Notes []models.Note `json:"notes"`
+	}
+	err := json.Unmarshal(wGetAll.Body.Bytes(), &paginated)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(paginated.Notes), 3)
 
 	// --- Unauthorized access ---
 	reqUnauthorized, _ := http.NewRequest("GET", "/notes", nil)
@@ -218,7 +223,7 @@ func TestNotesListAndUnauthorized(t *testing.T) {
 }
 
 func TestReviewNoteHandler(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	// Регистрация и логин
 	registerBody := map[string]string{
@@ -288,20 +293,20 @@ func TestReviewNoteHandler(t *testing.T) {
 	fmt.Printf("Parsed note: %+v\n", note) // Логирование структуры
 
 	memoryLevel, ok := note["memoryLevel"].(float64)
-    if !ok {
-        assert.Fail(t, "memoryLevel is missing or has wrong type")
-    } else {
-        assert.Greater(t, int(memoryLevel), 0)
-    }
+	if !ok {
+		assert.Fail(t, "memoryLevel is missing or has wrong type")
+	} else {
+		assert.Greater(t, int(memoryLevel), 0)
+	}
 
-    nextReviewAt, exists := note["next_review_at"]
-    if !exists {
-        assert.Fail(t, "nextReviewAt field is missing")
-    } else if nextReviewAt == nil {
-        assert.Fail(t, "nextReviewAt should not be null after positive review")
-    } else {
-        assert.NotEmpty(t, nextReviewAt)
-    }
+	nextReviewAt, exists := note["next_review_at"]
+	if !exists {
+		assert.Fail(t, "nextReviewAt field is missing")
+	} else if nextReviewAt == nil {
+		assert.Fail(t, "nextReviewAt should not be null after positive review")
+	} else {
+		assert.NotEmpty(t, nextReviewAt)
+	}
 
 	// --- Case 2: Remembered = false ---
 	reviewFalse := dto.ReviewInput{Remembered: false}
@@ -323,4 +328,180 @@ func TestReviewNoteHandler(t *testing.T) {
 	json.Unmarshal(wGet2.Body.Bytes(), &noteAfter)
 	assert.Equal(t, float64(0), noteAfter["memoryLevel"])
 	assert.Nil(t, noteAfter["nextReviewAt"])
+}
+
+func TestNotesFilterByFolderAndTags(t *testing.T) {
+	r := setupNoteControllerTestRouter(t)
+
+	email := "filteruser@example.com"
+	password := "filterpass"
+	nickname := "FilterUser"
+	token := registerAndLogin(t, r, email, password, nickname)
+
+	// Создаём папки
+	folder1 := createFolder(t, r, token, "Folder 1")
+	folder2 := createFolder(t, r, token, "Folder 2")
+
+	// Создаём теги
+	tag1 := createTag(t, r, token, "Tag 1")
+	tag2 := createTag(t, r, token, "Tag 2")
+	tag3 := createTag(t, r, token, "Tag 3")
+
+	// Создаём заметки с разными папками и тегами
+	noteA := createNoteWithFolderAndTags(t, r, token, "Note A", folder1.ID.String(), []string{tag1.ID.String(), tag2.ID.String()})
+	noteB := createNoteWithFolderAndTags(t, r, token, "Note B", folder2.ID.String(), []string{tag2.ID.String()})
+	noteC := createNoteWithFolderAndTags(t, r, token, "Note C", folder1.ID.String(), []string{tag3.ID.String()})
+	noteD := createNoteWithFolderAndTags(t, r, token, "Note D", "", []string{})
+
+	// Фильтрация по folder_id
+	resp := getNotes(t, r, token, map[string]string{"folder_id": folder1.ID.String()})
+	assert.True(t, containsNote(resp.Notes, noteA.ID))
+	assert.True(t, containsNote(resp.Notes, noteC.ID))
+	assert.False(t, containsNote(resp.Notes, noteB.ID))
+	assert.False(t, containsNote(resp.Notes, noteD.ID))
+
+	// Фильтрация по tag_ids[] (один тег)
+	resp = getNotes(t, r, token, map[string]string{"tag_ids[]": tag2.ID.String()})
+	assert.True(t, containsNote(resp.Notes, noteA.ID))
+	assert.True(t, containsNote(resp.Notes, noteB.ID))
+	assert.False(t, containsNote(resp.Notes, noteC.ID))
+	assert.False(t, containsNote(resp.Notes, noteD.ID))
+
+	// Фильтрация по tag_ids[] (несколько тегов)
+	resp = getNotesWithArray(t, r, token, map[string]string{}, map[string][]string{"tag_ids[]": {tag1.ID.String(), tag3.ID.String()}})
+	assert.True(t, containsNote(resp.Notes, noteA.ID))
+	assert.True(t, containsNote(resp.Notes, noteC.ID))
+	assert.False(t, containsNote(resp.Notes, noteB.ID))
+	assert.False(t, containsNote(resp.Notes, noteD.ID))
+
+	// Фильтрация по folder_id + tag_ids[]
+	resp = getNotes(t, r, token, map[string]string{"folder_id": folder1.ID.String(), "tag_ids[]": tag2.ID.String()})
+	assert.True(t, containsNote(resp.Notes, noteA.ID))
+	assert.False(t, containsNote(resp.Notes, noteB.ID))
+	assert.False(t, containsNote(resp.Notes, noteC.ID))
+	assert.False(t, containsNote(resp.Notes, noteD.ID))
+
+	// Пагинация
+	resp = getNotes(t, r, token, map[string]string{"limit": "2", "offset": "0"})
+	assert.LessOrEqual(t, len(resp.Notes), 2)
+}
+
+// Вспомогательные функции для теста
+func createFolder(t *testing.T, r *gin.Engine, token, name string) models.Folder {
+	body := map[string]string{"name": name}
+	jsonBody, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", "/folders", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 201, w.Code)
+	var folder models.Folder
+	json.Unmarshal(w.Body.Bytes(), &folder)
+	return folder
+}
+
+func createTag(t *testing.T, r *gin.Engine, token, name string) models.Tag {
+	body := map[string]string{"name": name}
+	jsonBody, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", "/tags", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 201, w.Code)
+	var tag models.Tag
+	json.Unmarshal(w.Body.Bytes(), &tag)
+	return tag
+}
+
+func createNoteWithFolderAndTags(t *testing.T, r *gin.Engine, token, title, folderID string, tagIDs []string) models.Note {
+	body := map[string]interface{}{"title": title, "content": "content"}
+	jsonBody, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", "/notes", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 201, w.Code)
+	var note models.Note
+	json.Unmarshal(w.Body.Bytes(), &note)
+	if folderID != "" {
+		assignBody := map[string]string{"folder_id": folderID}
+		assignJSON, _ := json.Marshal(assignBody)
+		assignReq, _ := http.NewRequest("POST", fmt.Sprintf("/notes/%s/folders", note.ID.String()), bytes.NewBuffer(assignJSON))
+		assignReq.Header.Set("Authorization", "Bearer "+token)
+		assignReq.Header.Set("Content-Type", "application/json")
+		w2 := httptest.NewRecorder()
+		r.ServeHTTP(w2, assignReq)
+		assert.Equal(t, 200, w2.Code)
+	}
+	for _, tagID := range tagIDs {
+		tagReq, _ := http.NewRequest("POST", fmt.Sprintf("/notes/%s/tags/%s", note.ID.String(), tagID), nil)
+		tagReq.Header.Set("Authorization", "Bearer "+token)
+		w3 := httptest.NewRecorder()
+		r.ServeHTTP(w3, tagReq)
+		assert.Equal(t, 200, w3.Code)
+	}
+	return note
+}
+
+func getNotes(t *testing.T, r *gin.Engine, token string, params map[string]string) struct{ Notes []models.Note } {
+	url := "/notes"
+	if len(params) > 0 {
+		first := true
+		for k, v := range params {
+			if first {
+				url += "?"
+				first = false
+			} else {
+				url += "&"
+			}
+			url += k + "=" + v
+		}
+	}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code)
+	var resp struct{ Notes []models.Note }
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	return resp
+}
+
+func getNotesWithArray(t *testing.T, r *gin.Engine, token string, params map[string]string, arrayParams map[string][]string) struct{ Notes []models.Note } {
+	urlStr := "/notes"
+	query := url.Values{}
+
+	// Добавляем обычные параметры
+	for k, v := range params {
+		query.Add(k, v)
+	}
+
+	// Добавляем массивные параметры
+	for k, values := range arrayParams {
+		for _, v := range values {
+			query.Add(k, v)
+		}
+	}
+
+	urlStr += "?" + query.Encode()
+	req, _ := http.NewRequest("GET", urlStr, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code)
+	var resp struct{ Notes []models.Note }
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	return resp
+}
+
+func containsNote(notes []models.Note, id uuid.UUID) bool {
+	for _, n := range notes {
+		if n.ID == id {
+			return true
+		}
+	}
+	return false
 }

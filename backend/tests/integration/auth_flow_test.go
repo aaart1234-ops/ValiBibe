@@ -1,26 +1,26 @@
 package integration
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/stretchr/testify/assert"
-    "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
+	"github.com/stretchr/testify/assert"
 
-    "valibibe/internal/repository"
-    "valibibe/internal/service"
+	"valibibe/internal/repository"
+	"valibibe/internal/service"
 )
 
 func TestAuthService_FullFlow(t *testing.T) {
-    err := godotenv.Load("../../../.env")
-    if err != nil {
-    	t.Fatal("Ошибка при загрузке .env файла")
-    }
+	err := godotenv.Load("../../../.env")
+	if err != nil {
+		t.Fatal("Ошибка при загрузке .env файла")
+	}
 
-    db := setupTestDB(t)
+	db := SetupTestDB(t)
 
-    userRepo := repository.NewUserRepository(db)
-    tokenService := service.NewTokenService()
-    authService := service.NewAuthService(userRepo, tokenService)
+	userRepo := repository.NewUserRepository(db)
+	tokenService := service.NewTokenService()
+	authService := service.NewAuthService(userRepo, tokenService)
 
 	email := "testuser@example.com"
 	password := "securePassword"

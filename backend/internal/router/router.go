@@ -1,10 +1,11 @@
 package router
 
 import (
-    "time"
+	"time"
+
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/files"
-	"github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"valibibe/internal/controller"
 	"valibibe/internal/middleware"
@@ -12,12 +13,13 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine,
-                    tokenService service.TokenService,
-                    authController *controller.AuthController,
-                    noteController *controller.NoteController,
-                    folderController *controller.FolderController,
-                    tagController *controller.TagController,
-                ) {
+	tokenService service.TokenService,
+	authController *controller.AuthController,
+	noteController *controller.NoteController,
+	folderController *controller.FolderController,
+	tagController *controller.TagController,
+	noteTagController *controller.NoteTagController,
+) {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -26,9 +28,9 @@ func SetupRoutes(r *gin.Engine,
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-    r.GET("/", func(c *gin.Context) {
-    	c.Header("Content-Type", "text/html; charset=utf-8")
-    	c.String(200, `
+	r.GET("/", func(c *gin.Context) {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(200, `
     		<!DOCTYPE html>
     		<html lang="ru">
     		<head>
@@ -55,12 +57,11 @@ func SetupRoutes(r *gin.Engine,
     			<p><strong>Название:</strong> My App Backend</p>
     			<p><strong>Версия:</strong> 1.0</p>
     			<p><strong>Swagger UI:</strong> <a href="/swagger/index.html" target="_blank">Открыть документацию</a></p>
-    			<p><strong>Время:</strong> ` + time.Now().Format("02 Jan 2006 15:04:05") + `</p>
+    			<p><strong>Время:</strong> `+time.Now().Format("02 Jan 2006 15:04:05")+`</p>
     		</body>
     		</html>
     	`)
-    })
-
+	})
 
 	// Auth routes
 	auth := r.Group("/auth")
@@ -71,37 +72,52 @@ func SetupRoutes(r *gin.Engine,
 		auth.POST("/logout", middleware.AuthMiddleware(tokenService), authController.LogoutHandler)
 	}
 
-    // Notes
-    notes := r.Group("/notes")
-    notes.Use(middleware.AuthMiddleware(tokenService))
-    {
-        notes.POST("", noteController.CreateNote)
-        notes.GET("", noteController.GetAllNotes)
-        notes.GET("/:id", noteController.GetNoteByID)
-        notes.PUT("/:id", noteController.UpdateNote)
-        notes.DELETE("/:id", noteController.DeleteNote)
-        notes.POST("/:id/archive", noteController.ArchiveNote)
-        notes.POST("/:id/unarchive", noteController.UnArchiveNote)
-        notes.POST("/:id/review", noteController.ReviewNoteHandler)
-    }
+	// Notes
+	notes := r.Group("/notes")
+	notes.Use(middleware.AuthMiddleware(tokenService))
+	{
+		notes.POST("", noteController.CreateNote)
+		notes.GET("", noteController.GetAllNotes)
+		notes.GET("/:id", noteController.GetNoteByID)
+		notes.PUT("/:id", noteController.UpdateNote)
+		notes.DELETE("/:id", noteController.DeleteNote)
+		notes.POST("/:id/archive", noteController.ArchiveNote)
+		notes.POST("/:id/unarchive", noteController.UnArchiveNote)
+		notes.POST("/:id/review", noteController.ReviewNoteHandler)
+		notes.POST("/:id/folders", noteController.AssignFolder)
+		notes.DELETE("/:id/folders/:folderId", noteController.RemoveFolder)
+		notes.POST("/batch/folders", noteController.BatchAssignFolder)
 
-    // Folders
-    folders := r.Group("/folders")
-    folders.Use(middleware.AuthMiddleware(tokenService))
-    {
-        folders.POST("", folderController.CreateFolder)
-        folders.GET("/tree", folderController.GetFolderTree)
-        folders.PUT("/:id", folderController.UpdateFolder)
-        folders.DELETE("/:id", folderController.DeleteFolder)
-    }
+		// Note-Tag relationships
+		notes.POST("/:id/tags/:tagId", noteTagController.AddTag)
+		notes.DELETE("/:id/tags/:tagId", noteTagController.RemoveTag)
+	}
 
-    // Tags
-    tags := r.Group("/tags")
-    tags.Use(middleware.AuthMiddleware(tokenService))
-    {
-        tags.POST("", tagController.CreateTag)
-        tags.GET("", tagController.ListTags)
-        tags.PUT("/:id", tagController.UpdateTag)
-        tags.DELETE("/:id", tagController.DeleteTag)
-    }
+	// Folders
+	folders := r.Group("/folders")
+	folders.Use(middleware.AuthMiddleware(tokenService))
+	{
+		folders.POST("", folderController.CreateFolder)
+		folders.GET("/tree", folderController.GetFolderTree)
+		folders.PUT("/:id", folderController.UpdateFolder)
+		folders.DELETE("/:id", folderController.DeleteFolder)
+	}
+
+	// Tags
+	tags := r.Group("/tags")
+	tags.Use(middleware.AuthMiddleware(tokenService))
+	{
+		tags.POST("", tagController.CreateTag)
+		tags.GET("", tagController.ListTags)
+		tags.PUT("/:id", tagController.UpdateTag)
+		tags.DELETE("/:id", tagController.DeleteTag)
+	}
+
+	// Note-Tag batch operations
+	noteTags := r.Group("/notes/tags")
+	noteTags.Use(middleware.AuthMiddleware(tokenService))
+	{
+		noteTags.POST("/batch", noteTagController.AddTagsBatch)
+	}
+
 }

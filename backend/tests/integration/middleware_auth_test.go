@@ -6,15 +6,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"valibibe/internal/middleware"
 	"valibibe/internal/repository"
 	"valibibe/internal/service"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthMiddleware(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 
 	userRepo := repository.NewUserRepository(db)
 	tokenService := service.NewTokenService()

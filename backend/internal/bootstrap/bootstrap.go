@@ -1,14 +1,15 @@
 package bootstrap
 
 import (
-	"github.com/gin-gonic/gin"
-	"valibibe/internal/db"
-	"valibibe/internal/repository"
-	"valibibe/internal/service"
-	"valibibe/internal/controller"
-	"valibibe/internal/router"
-	"valibibe/internal/middleware"
 	_ "valibibe/docs"
+	"valibibe/internal/controller"
+	"valibibe/internal/db"
+	"valibibe/internal/middleware"
+	"valibibe/internal/repository"
+	"valibibe/internal/router"
+	"valibibe/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func InitializeApp() (*gin.Engine, error) {
@@ -26,20 +27,23 @@ func InitializeApp() (*gin.Engine, error) {
 	tokenService := service.NewTokenService()
 	authService := service.NewAuthService(userRepo, tokenService)
 	noteService := service.NewNoteService(noteRepo)
+	assignFolderService := service.NewAssignFolderService(noteRepo)
 	folderService := service.NewFolderService(folderRepo)
 	tagService := service.NewTagService(tagRepo)
+	noteTagService := service.NewNoteTagService(noteRepo, tagRepo)
 
 	// Контроллеры
 	authController := controller.NewAuthController(authService)
-	noteController := controller.NewNoteController(noteService)
+	noteController := controller.NewNoteController(noteService, assignFolderService)
 	folderController := controller.NewFolderController(folderService)
 	tagController := controller.NewTagController(tagService)
+	noteTagController := controller.NewNoteTagController(noteTagService)
 
 	// Инициализация Gin
 	engine := gin.Default()
-    engine.Use(middleware.CORSMiddleware())
+	engine.Use(middleware.CORSMiddleware())
 	// Роутинг
-	router.SetupRoutes(engine, tokenService, authController, noteController, folderController, tagController)
+	router.SetupRoutes(engine, tokenService, authController, noteController, folderController, tagController, noteTagController)
 
 	return engine, nil
 }

@@ -3,20 +3,20 @@ package service
 import (
     "context"
     "errors"
-    "fmt"
-    "time"
 
     "github.com/google/uuid"
-    "valibibe/internal/models"
-	"valibibe/internal/controller/dto"
     "valibibe/internal/repository/interfaces"
 )
 
 type AssignFolderService struct {
-    
+    noteRepo interfaces.NoteRepository
 }
 
-func (s *NoteService) AssignFolder(ctx context.Context, userID, noteID, folderID string) error {
+func NewAssignFolderService(noteRepo interfaces.NoteRepository) *AssignFolderService {
+    return &AssignFolderService{noteRepo: noteRepo}
+}
+
+func (s *AssignFolderService) AssignFolder(ctx context.Context, userID, noteID, folderID string) error {
     uid, err := uuid.Parse(userID)
     if err != nil {
         return errors.New("invalid userID")
@@ -33,7 +33,7 @@ func (s *NoteService) AssignFolder(ctx context.Context, userID, noteID, folderID
     return s.noteRepo.UpdateFolder(ctx, uid, nid, &fid)
 }
 
-func (s *NoteService) RemoveFolder(ctx context.Context, userID, noteID, folderID string) error {
+func (s *AssignFolderService) RemoveFolder(ctx context.Context, userID, noteID, folderID string) error {
     uid, err := uuid.Parse(userID)
     if err != nil {
         return errors.New("invalid userID")
@@ -59,7 +59,7 @@ func (s *NoteService) RemoveFolder(ctx context.Context, userID, noteID, folderID
     return s.noteRepo.UpdateFolder(ctx, uid, nid, nil)
 }
 
-func (s *NoteService) BatchAssignFolder(ctx context.Context, userID string, noteIDs []string, folderID *string) error {
+func (s *AssignFolderService) BatchAssignFolder(ctx context.Context, userID string, noteIDs []string, folderID *string) error {
     uid, err := uuid.Parse(userID)
     if err != nil {
         return errors.New("invalid userID")

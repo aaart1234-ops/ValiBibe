@@ -527,6 +527,99 @@ const docTemplate = `{
                 }
             }
         },
+        "/notes/batch/folders": {
+            "post": {
+                "description": "Mass update notes to link or unlink them from a folder.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Batch assign or remove folder for multiple notes",
+                "parameters": [
+                    {
+                        "description": "Batch folder assignment input",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BatchAssignFolderInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/tags/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note-tags"
+                ],
+                "summary": "Массовое добавление тегов к заметкам",
+                "parameters": [
+                    {
+                        "description": "Массив связей заметка-тег",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/notes/{id}": {
             "get": {
                 "security": [
@@ -715,6 +808,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/notes/{id}/folders": {
+            "post": {
+                "description": "Link a note to a folder (each note can belong to only one folder).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Assign a folder to a note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"a12b34cd-5678-90ef-1234-567890abcdef\"",
+                        "description": "Note ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Folder assignment input",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AssignFolderInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/{id}/folders/{folderId}": {
+            "delete": {
+                "description": "Unlink a note from its folder.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notes"
+                ],
+                "summary": "Remove folder from a note",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"a12b34cd-5678-90ef-1234-567890abcdef\"",
+                        "description": "Note ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"d290f1ee-6c54-4b01-90e6-d701748f0851\"",
+                        "description": "Folder ID",
+                        "name": "folderId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/notes/{id}/review": {
             "post": {
                 "security": [
@@ -768,6 +959,127 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notes/{id}/tags/{tagId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note-tags"
+                ],
+                "summary": "Добавить тег к заметке",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"a12b34cd-5678-90ef-1234-567890abcdef\"",
+                        "description": "Note ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"b23c45de-6789-01fg-2345-678901bcdefg\"",
+                        "description": "Tag ID",
+                        "name": "tagId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "note-tags"
+                ],
+                "summary": "Удалить тег у заметки",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "\"a12b34cd-5678-90ef-1234-567890abcdef\"",
+                        "description": "Note ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "\"b23c45de-6789-01fg-2345-678901bcdefg\"",
+                        "description": "Tag ID",
+                        "name": "tagId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1077,6 +1389,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AssignFolderInput": {
+            "type": "object",
+            "required": [
+                "folder_id"
+            ],
+            "properties": {
+                "folder_id": {
+                    "type": "string",
+                    "example": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                }
+            }
+        },
+        "dto.BatchAssignFolderInput": {
+            "type": "object",
+            "required": [
+                "note_ids"
+            ],
+            "properties": {
+                "folder_id": {
+                    "description": "null → убрать связь",
+                    "type": "string",
+                    "example": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                },
+                "note_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"a12b34cd-5678-90ef-1234-567890abcdef\"",
+                        " \"b34c56de-7890-12gh-3456-789012ijklmn\"]"
+                    ]
+                }
+            }
+        },
         "dto.FolderCreateInput": {
             "type": "object",
             "required": [
@@ -1232,6 +1579,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "folder_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -1240,6 +1590,12 @@ const docTemplate = `{
                 },
                 "next_review_at": {
                     "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Tag"
+                    }
                 },
                 "title": {
                     "type": "string"

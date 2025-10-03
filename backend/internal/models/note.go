@@ -13,6 +13,8 @@ type Note struct {
     UserID       uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
     Title        string     `gorm:"type:varchar(255);not null" json:"title"`
     Content      string     `gorm:"type:text" json:"content"`
+    FolderID     *uuid.UUID `gorm:"type:uuid" json:"folder_id"`
+    Tags         []Tag      `gorm:"many2many:note_tags;" json:"tags"`
     MemoryLevel  int        `gorm:"type:int;not null;default:0;check:memory_level >= 0 AND memory_level <= 100" json:"memoryLevel"`
     Archived     bool       `gorm:"default:false" json:"archived"`
     NextReviewAt *time.Time `json:"next_review_at, omitempty"`

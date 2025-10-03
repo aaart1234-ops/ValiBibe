@@ -2,20 +2,20 @@ package integration
 
 import (
 	"context"
-	"testing"
 	"fmt"
+	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"valibibe/internal/models"
 	"valibibe/internal/controller/dto"
+	"valibibe/internal/models"
 	"valibibe/internal/repository"
 )
 
 func TestNoteRepository(t *testing.T) {
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	ctx := context.Background()
 	noteRepo := repository.NewNoteRepository(db)
 
@@ -38,7 +38,7 @@ func TestNoteRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// --- GetNoteByID ---
-	gotNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
+	gotNote, err := noteRepo.GetNoteByID(ctx, user.ID, note.ID)
 	require.NoError(t, err)
 	assert.Equal(t, note.Title, gotNote.Title)
 
@@ -91,7 +91,7 @@ func TestNoteRepository(t *testing.T) {
 	err = noteRepo.UpdateNote(ctx, note)
 	require.NoError(t, err)
 
-	updatedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
+	updatedNote, err := noteRepo.GetNoteByID(ctx, user.ID, note.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "Updated Title", updatedNote.Title)
 
@@ -99,37 +99,36 @@ func TestNoteRepository(t *testing.T) {
 	err = noteRepo.ArchiveNote(ctx, note.ID.String())
 	require.NoError(t, err)
 
-	archivedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
+	archivedNote, err := noteRepo.GetNoteByID(ctx, user.ID, note.ID)
 	require.NoError(t, err)
 	assert.True(t, archivedNote.Archived)
 
 	// --- UnarchiveNote ---
-    err = noteRepo.UnArchiveNote(ctx, note.ID.String())
-    require.NoError(t, err)
+	err = noteRepo.UnArchiveNote(ctx, note.ID.String())
+	require.NoError(t, err)
 
-    unarchivedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
-    require.NoError(t, err)
-    assert.False(t, unarchivedNote.Archived)
+	unarchivedNote, err := noteRepo.GetNoteByID(ctx, user.ID, note.ID)
+	require.NoError(t, err)
+	assert.False(t, unarchivedNote.Archived)
 
-    filterAfterUnarchive := &dto.NoteFilter{UserID: user.ID.String()}
-    notesAfterUnarchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterUnarchive)
-    require.NoError(t, err)
+	filterAfterUnarchive := &dto.NoteFilter{UserID: user.ID.String()}
+	notesAfterUnarchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterUnarchive)
+	require.NoError(t, err)
 
-    	found := false
-    	for _, n := range notesAfterUnarchive.Notes {
-    		if n.ID == note.ID {
-    			found = true
-    			break
-    		}
-    	}
-    	assert.True(t, found, "Unarchived note should be returned in GetAllNotesByUserID")
-
+	found := false
+	for _, n := range notesAfterUnarchive.Notes {
+		if n.ID == note.ID {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Unarchived note should be returned in GetAllNotesByUserID")
 
 	// --- GetAllNotesByUserID: проверка игнорирования archived ---
 	filterAfterArchive := &dto.NoteFilter{
-    	UserID:   user.ID.String(),
-    	Archived: ptr(false), // Фильтрация только по неархивным
-    }
+		UserID:   user.ID.String(),
+		Archived: ptr(false), // Фильтрация только по неархивным
+	}
 	notesAfterArchive, err := noteRepo.GetAllNotesByUserID(ctx, filterAfterArchive)
 	require.NoError(t, err)
 	for _, n := range notesAfterArchive.Notes {
@@ -140,7 +139,7 @@ func TestNoteRepository(t *testing.T) {
 	err = noteRepo.DeleteNote(ctx, note.ID.String())
 	require.NoError(t, err)
 
-	deletedNote, err := noteRepo.GetNoteByID(ctx, note.ID.String())
+	deletedNote, err := noteRepo.GetNoteByID(ctx, user.ID, note.ID)
 	require.NoError(t, err)
 	assert.Nil(t, deletedNote)
 }
@@ -148,4 +147,3 @@ func TestNoteRepository(t *testing.T) {
 func ptr[T any](v T) *T {
 	return &v
 }
-

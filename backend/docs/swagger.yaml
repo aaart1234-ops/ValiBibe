@@ -1,4 +1,28 @@
 definitions:
+  dto.AssignFolderInput:
+    properties:
+      folder_id:
+        example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        type: string
+    required:
+    - folder_id
+    type: object
+  dto.BatchAssignFolderInput:
+    properties:
+      folder_id:
+        description: null → убрать связь
+        example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        type: string
+      note_ids:
+        example:
+        - '["a12b34cd-5678-90ef-1234-567890abcdef"'
+        - ' "b34c56de-7890-12gh-3456-789012ijklmn"]'
+        items:
+          type: string
+        type: array
+    required:
+    - note_ids
+    type: object
   dto.FolderCreateInput:
     properties:
       name:
@@ -102,12 +126,18 @@ definitions:
         type: string
       created_at:
         type: string
+      folder_id:
+        type: string
       id:
         type: string
       memoryLevel:
         type: integer
       next_review_at:
         type: string
+      tags:
+        items:
+          $ref: '#/definitions/models.Tag'
+        type: array
       title:
         type: string
       updated_at:
@@ -604,6 +634,72 @@ paths:
       summary: Архивировать заметку
       tags:
       - notes
+  /notes/{id}/folders:
+    post:
+      consumes:
+      - application/json
+      description: Link a note to a folder (each note can belong to only one folder).
+      parameters:
+      - description: Note ID
+        example: '"a12b34cd-5678-90ef-1234-567890abcdef"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Folder assignment input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AssignFolderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Assign a folder to a note
+      tags:
+      - notes
+  /notes/{id}/folders/{folderId}:
+    delete:
+      description: Unlink a note from its folder.
+      parameters:
+      - description: Note ID
+        example: '"a12b34cd-5678-90ef-1234-567890abcdef"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Folder ID
+        example: '"d290f1ee-6c54-4b01-90e6-d701748f0851"'
+        in: path
+        name: folderId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove folder from a note
+      tags:
+      - notes
   /notes/{id}/review:
     post:
       consumes:
@@ -644,6 +740,85 @@ paths:
       summary: Обновить память (review) по заметке
       tags:
       - notes
+  /notes/{id}/tags/{tagId}:
+    delete:
+      parameters:
+      - description: Note ID
+        example: '"a12b34cd-5678-90ef-1234-567890abcdef"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tag ID
+        example: '"b23c45de-6789-01fg-2345-678901bcdefg"'
+        in: path
+        name: tagId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить тег у заметки
+      tags:
+      - note-tags
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note ID
+        example: '"a12b34cd-5678-90ef-1234-567890abcdef"'
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tag ID
+        example: '"b23c45de-6789-01fg-2345-678901bcdefg"'
+        in: path
+        name: tagId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Добавить тег к заметке
+      tags:
+      - note-tags
   /notes/{id}/unarchive:
     post:
       parameters:
@@ -670,6 +845,65 @@ paths:
       summary: Разархивировать заметку
       tags:
       - notes
+  /notes/batch/folders:
+    post:
+      consumes:
+      - application/json
+      description: Mass update notes to link or unlink them from a folder.
+      parameters:
+      - description: Batch folder assignment input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BatchAssignFolderInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Batch assign or remove folder for multiple notes
+      tags:
+      - notes
+  /notes/tags/batch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Массив связей заметка-тег
+        in: body
+        name: input
+        required: true
+        schema:
+          items:
+            type: object
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Массовое добавление тегов к заметкам
+      tags:
+      - note-tags
   /tags:
     get:
       description: Получает список всех тегов пользователя

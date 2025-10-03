@@ -8,63 +8,66 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
-    "github.com/joho/godotenv"
 
-	"valibibe/internal/repository"
-	"valibibe/internal/service"
-	"valibibe/internal/router"
 	"valibibe/internal/controller"
+	"valibibe/internal/repository"
+	"valibibe/internal/router"
+	"valibibe/internal/service"
 )
 
-func setupAuthControllerTestRouter(t *testing.T) *gin.Engine {
-    err := godotenv.Load("../../../.env")
+func SetupAuthControllerTestRouter(t *testing.T) *gin.Engine {
+	err := godotenv.Load("../../../.env")
 
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 
-    db := setupTestDB(t)
-    userRepo := repository.NewUserRepository(db)
-    tokenService := service.NewTokenService()
-    authService := service.NewAuthService(userRepo, tokenService)
-    authController := controller.NewAuthController(authService)
+	db := SetupTestDB(t)
+	userRepo := repository.NewUserRepository(db)
+	tokenService := service.NewTokenService()
+	authService := service.NewAuthService(userRepo, tokenService)
+	authController := controller.NewAuthController(authService)
 	noteRepo := repository.NewNoteRepository(db)
 	noteService := service.NewNoteService(noteRepo)
-	noteController := controller.NewNoteController(noteService)
+	assignFolderService := service.NewAssignFolderService(noteRepo)
+	noteController := controller.NewNoteController(noteService, assignFolderService)
 	folderRepo := repository.NewFolderRepo(db)
 	folderService := service.NewFolderService(folderRepo)
 	folderController := controller.NewFolderController(folderService)
 	tagRepo := repository.NewTagRepository(db)
 	tagService := service.NewTagService(tagRepo)
 	tagController := controller.NewTagController(tagService)
+	noteTagService := service.NewNoteTagService(noteRepo, tagRepo)
+	noteTagController := controller.NewNoteTagController(noteTagService)
 
-    r := gin.Default()
-    router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController)
+	r := gin.Default()
+	router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController, noteTagController)
 
-    return r
+	return r
 }
 
 func TestRegisterUserHandler_Valid(t *testing.T) {
-    r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
-    body := map[string]string{
+	body := map[string]string{
 		"email":    "newuser@example.com",
 		"password": "strongpass",
 		"nickname": "TestUser",
-    }
+	}
 
-    jsonValue, _ := json.Marshal(body)
+	jsonValue, _ := json.Marshal(body)
 
-    req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonValue))
-    req.Header.Set("Content-Type", "application/json")
-    w := httptest.NewRecorder()
-    r.ServeHTTP(w, req)
+	req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBuffer(jsonValue))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 
-    assert.Equal(t, 200, w.Code)
-    assert.Contains(t, w.Body.String(), "newuser@example.com")
+	assert.Equal(t, 200, w.Code)
+	assert.Contains(t, w.Body.String(), "newuser@example.com")
 }
 
 func TestRegisterUserHandler_Invalid(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	body := map[string]string{
 		"email":    "",
@@ -81,7 +84,7 @@ func TestRegisterUserHandler_Invalid(t *testing.T) {
 }
 
 func TestLoginUserHandler_Valid(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	// Сначала зарегистрируем пользователя
 	registerBody := map[string]string{
@@ -115,7 +118,7 @@ func TestLoginUserHandler_Valid(t *testing.T) {
 }
 
 func TestLoginUserHandler_Invalid(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	body := map[string]string{
 		"email":    "nonexistent@example.com",
@@ -132,7 +135,7 @@ func TestLoginUserHandler_Invalid(t *testing.T) {
 }
 
 func TestMeHandler_Authorized(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	// Зарегистрировать и залогиниться
 	registerBody := map[string]string{
@@ -172,7 +175,7 @@ func TestMeHandler_Authorized(t *testing.T) {
 }
 
 func TestMeHandler_Unauthorized(t *testing.T) {
-	r := setupAuthControllerTestRouter(t)
+	r := SetupAuthControllerTestRouter(t)
 
 	req, _ := http.NewRequest("GET", "/auth/me", nil)
 	w := httptest.NewRecorder()
