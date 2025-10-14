@@ -82,6 +82,65 @@ definitions:
       remembered:
         type: boolean
     type: object
+  dto.ReviewSessionInput:
+    properties:
+      folder_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      limit:
+        example: 10
+        maximum: 100
+        minimum: 1
+        type: integer
+      tag_ids:
+        example:
+        - 550e8400-e29b-41d4-a716-446655440001
+        - 550e8400-e29b-41d4-a716-446655440002
+        items:
+          type: string
+        type: array
+    type: object
+  dto.ReviewSessionNote:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      folder_id:
+        type: string
+      folder_name:
+        type: string
+      id:
+        type: string
+      memory_level:
+        type: integer
+      next_review_at:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/dto.Tag'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.ReviewSessionResponse:
+    properties:
+      notes:
+        items:
+          $ref: '#/definitions/dto.ReviewSessionNote'
+        type: array
+      total:
+        type: integer
+    type: object
+  dto.Tag:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   dto.TagCreateInput:
     properties:
       name:
@@ -126,6 +185,8 @@ definitions:
         type: string
       created_at:
         type: string
+      folder:
+        $ref: '#/definitions/models.Folder'
       folder_id:
         type: string
       id:
@@ -359,7 +420,7 @@ paths:
       summary: Удалить папку (с каскадом заметок и подпапок)
       tags:
       - folders
-    patch:
+    put:
       consumes:
       - application/json
       parameters:
@@ -464,6 +525,17 @@ paths:
         minimum: 0
         name: offset
         type: integer
+      - description: ID папки для фильтрации заметок по папке
+        in: query
+        name: folder_id
+        type: string
+      - collectionFormat: csv
+        description: Массив ID тегов для фильтрации заметок по тегам (через tag_ids[]=id1&tag_ids[]=id2)
+        in: query
+        items:
+          type: string
+        name: tag_ids
+        type: array
       produces:
       - application/json
       responses:
@@ -904,6 +976,43 @@ paths:
       summary: Массовое добавление тегов к заметкам
       tags:
       - note-tags
+  /review/sessions:
+    post:
+      consumes:
+      - application/json
+      description: Создает сессию повторения с фильтрацией по папке и тегам. Возвращает
+        заметки готовые к повторению, при нехватке добавляет случайные заметки.
+      parameters:
+      - description: Параметры сессии повторения
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReviewSessionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewSessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать сессию повторения
+      tags:
+      - review-sessions
   /tags:
     get:
       description: Получает список всех тегов пользователя

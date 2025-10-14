@@ -285,44 +285,7 @@ const docTemplate = `{
             }
         },
         "/folders/{id}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "tags": [
-                    "folders"
-                ],
-                "summary": "Удалить папку (с каскадом заметок и подпапок)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Folder ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "patch": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -379,6 +342,43 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "Удалить папку (с каскадом заметок и подпапок)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Folder ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     "500": {
@@ -451,6 +451,22 @@ const docTemplate = `{
                         "default": 0,
                         "description": "Смещение для пагинации",
                         "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID папки для фильтрации заметок по папке",
+                        "name": "folder_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Массив ID тегов для фильтрации заметок по тегам (через tag_ids[]=id1\u0026tag_ids[]=id2)",
+                        "name": "tag_ids",
                         "in": "query"
                     }
                 ],
@@ -1132,6 +1148,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/review/sessions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создает сессию повторения с фильтрацией по папке и тегам. Возвращает заметки готовые к повторению, при нехватке добавляет случайные заметки.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "review-sessions"
+                ],
+                "summary": "Создать сессию повторения",
+                "parameters": [
+                    {
+                        "description": "Параметры сессии повторения",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReviewSessionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReviewSessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tags": {
             "get": {
                 "description": "Получает список всех тегов пользователя",
@@ -1512,6 +1585,94 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ReviewSessionInput": {
+            "type": "object",
+            "properties": {
+                "folder_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "limit": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 10
+                },
+                "tag_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "550e8400-e29b-41d4-a716-446655440001",
+                        "550e8400-e29b-41d4-a716-446655440002"
+                    ]
+                }
+            }
+        },
+        "dto.ReviewSessionNote": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "folder_id": {
+                    "type": "string"
+                },
+                "folder_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "memory_level": {
+                    "type": "integer"
+                },
+                "next_review_at": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Tag"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ReviewSessionResponse": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ReviewSessionNote"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.Tag": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.TagCreateInput": {
             "type": "object",
             "required": [
@@ -1578,6 +1739,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "folder": {
+                    "$ref": "#/definitions/models.Folder"
                 },
                 "folder_id": {
                     "type": "string"

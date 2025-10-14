@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -192,4 +193,91 @@ func (r *NoteRepo) AddTagsBatch(ctx context.Context, noteTags []interfaces.NoteT
     `, strings.Join(values, ","))
 
 	return r.db.WithContext(ctx).Exec(query, args...).Error
+}
+
+// GetNotesForReview возвращает заметки для повторения с учетом фильтров
+func (r *NoteRepo) GetNotesForReview(ctx context.Context, userID uuid.UUID, filter *dto.ReviewSessionInput) ([]models.Note, error) {
+	var notes []models.Note
+
+	// Базовый запрос для заметок готовых к повторению
+	now := time.Now()
+	query := r.db.WithContext(ctx).
+		Model(&models.Note{}).
+		Where("user_id = ? AND archived = ? AND next_review_at IS NOT NULL AND next_review_at <= ?",
+			userID, false, now).
+		Preload("Tags").
+		Preload("Folder")
+
+	// Применяем фильтры
+	if filter.FolderID != nil && *filter.FolderID != "" {
+		query = query.Where("folder_id = ?", *filter.FolderID)
+	}
+
+	if len(filter.TagIDs) > 0 {
+		query = query.Joins("JOIN note_tags ON notes.id = note_tags.note_id").
+			Where("note_tags.tag_id IN (?)", filter.TagIDs).
+			Group("notes.id")
+	}
+
+	// Сортируем по приоритету повторения (сначала те, что давно не повторялись)
+	query = query.Order("next_review_at ASC, created_at ASC")
+
+	// Ограничиваем количество
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 10 // значение по умолчанию
+	}
+	if limit > 100 {
+		limit = 100 // максимальное значение
+	}
+
+	// Получаем заметки готовые к повторению
+	err := query.Limit(limit).Find(&notes).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Если не хватает заметок, добавляем случайные из тех же фильтров
+	if len(notes) < limit {
+		remaining := limit - len(notes)
+		var additionalNotes []models.Note
+
+		// Создаем запрос для случайных заметок (исключая уже выбранные)
+		randomQuery := r.db.WithContext(ctx).
+			Model(&models.Note{}).
+			Where("user_id = ? AND archived = ?", userID, false).
+			Preload("Tags").
+			Preload("Folder")
+
+		// Применяем те же фильтры
+		if filter.FolderID != nil && *filter.FolderID != "" {
+			randomQuery = randomQuery.Where("folder_id = ?", *filter.FolderID)
+		}
+
+		if len(filter.TagIDs) > 0 {
+			randomQuery = randomQuery.Joins("JOIN note_tags ON notes.id = note_tags.note_id").
+				Where("note_tags.tag_id IN (?)", filter.TagIDs).
+				Group("notes.id")
+		}
+
+		// Исключаем уже выбранные заметки
+		if len(notes) > 0 {
+			excludeIDs := make([]uuid.UUID, len(notes))
+			for i, note := range notes {
+				excludeIDs[i] = note.ID
+			}
+			randomQuery = randomQuery.Where("id NOT IN (?)", excludeIDs)
+		}
+
+		// Сортируем случайно и берем оставшиеся
+		err = randomQuery.Order("RANDOM()").Limit(remaining).Find(&additionalNotes).Error
+		if err != nil {
+			return notes, err // возвращаем то, что уже есть
+		}
+
+		// Добавляем случайные заметки к результату
+		notes = append(notes, additionalNotes...)
+	}
+
+	return notes, nil
 }

@@ -19,6 +19,7 @@ func SetupRoutes(r *gin.Engine,
 	folderController *controller.FolderController,
 	tagController *controller.TagController,
 	noteTagController *controller.NoteTagController,
+	reviewSessionController *controller.ReviewSessionController,
 ) {
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -118,6 +119,13 @@ func SetupRoutes(r *gin.Engine,
 	noteTags.Use(middleware.AuthMiddleware(tokenService))
 	{
 		noteTags.POST("/batch", noteTagController.AddTagsBatch)
+	}
+
+	// Review Sessions
+	review := r.Group("/review")
+	review.Use(middleware.AuthMiddleware(tokenService))
+	{
+		review.POST("/sessions", reviewSessionController.CreateReviewSession)
 	}
 
 }

@@ -29,4 +29,5 @@ type NoteRepository interface {
     AddTag(ctx context.Context, noteID, tagID uuid.UUID) error
     RemoveTag(ctx context.Context,noteID, tagID uuid.UUID) error
     AddTagsBatch(ctx context.Context, noteTags []NoteTag) error
+    GetNotesForReview(ctx context.Context, userID uuid.UUID, filter *dto.ReviewSessionInput) ([]models.Note, error)
 }

@@ -31,6 +31,7 @@ func InitializeApp() (*gin.Engine, error) {
 	folderService := service.NewFolderService(folderRepo)
 	tagService := service.NewTagService(tagRepo)
 	noteTagService := service.NewNoteTagService(noteRepo, tagRepo)
+	reviewSessionService := service.NewReviewSessionService(noteRepo)
 
 	// Контроллеры
 	authController := controller.NewAuthController(authService)
@@ -38,12 +39,13 @@ func InitializeApp() (*gin.Engine, error) {
 	folderController := controller.NewFolderController(folderService)
 	tagController := controller.NewTagController(tagService)
 	noteTagController := controller.NewNoteTagController(noteTagService)
+	reviewSessionController := controller.NewReviewSessionController(reviewSessionService)
 
 	// Инициализация Gin
 	engine := gin.Default()
 	engine.Use(middleware.CORSMiddleware())
 	// Роутинг
-	router.SetupRoutes(engine, tokenService, authController, noteController, folderController, tagController, noteTagController)
+	router.SetupRoutes(engine, tokenService, authController, noteController, folderController, tagController, noteTagController, reviewSessionController)
 
 	return engine, nil
 }

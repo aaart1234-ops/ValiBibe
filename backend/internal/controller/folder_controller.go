@@ -3,9 +3,10 @@ package controller
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"valibibe/internal/controller/dto"
 	"valibibe/internal/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type FolderController struct {
@@ -36,7 +37,7 @@ func (c *FolderController) CreateFolder(ctx *gin.Context) {
 		return
 	}
 
-        folder, err := c.folderService.CreateFolder(ctx, userID, input)
+	folder, err := c.folderService.CreateFolder(ctx, userID, input)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -77,7 +78,7 @@ func (c *FolderController) GetFolderTree(ctx *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /folders/{id} [patch]
+// @Router /folders/{id} [put]
 func (c *FolderController) UpdateFolder(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 	id := ctx.Param("id")

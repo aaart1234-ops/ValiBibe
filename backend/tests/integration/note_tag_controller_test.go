@@ -46,7 +46,7 @@ func setupNoteTagControllerTestRouter(t *testing.T) *gin.Engine {
 	noteTagController := controller.NewNoteTagController(noteTagService)
 
 	r := gin.Default()
-	router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController, noteTagController)
+	router.SetupRoutes(r, tokenService, authController, noteController, folderController, tagController, noteTagController, nil)
 
 	return r
 }

@@ -94,6 +94,12 @@ func (m *MockNoteRepo) AddTagsBatch(ctx context.Context, noteTags []interfaces.N
 	return args.Error(0)
 }
 
+func (m *MockNoteRepo) GetNotesForReview(ctx context.Context, userID uuid.UUID, filter *dto.ReviewSessionInput) ([]models.Note, error) {
+	args := m.Called(ctx, userID, filter)
+	notes, _ := args.Get(0).([]models.Note)
+	return notes, args.Error(1)
+}
+
 // ====== Тесты NoteService ======
 
 func TestNoteService_CreateNote(t *testing.T) {
