@@ -143,17 +143,27 @@ func (r *NoteRepo) DeleteNote(ctx context.Context, id string) error {
 		Delete(&models.Note{}).Error
 }
 
-func (r *NoteRepo) UpdateFolder(ctx context.Context, userID, noteID uuid.UUID, folderID *uuid.UUID) error {
+
+func (r *NoteRepo) CountNotesByIDsAndUserID(ctx context.Context, noteIDs []string, userID string) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Note{}).
+		Where("id IN ? AND user_id = ?", noteIDs, userID).
+		Count(&count).Error
+	return int(count), err
+}
+
+func (r *NoteRepo) UpdateFolder(ctx context.Context, noteID uuid.UUID, folderID *uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Model(&models.Note{}).
-		Where("id = ? AND user_id = ?", noteID, userID).
+		Where("id = ?", noteID).
 		Update("folder_id", folderID).Error
 }
 
-func (r *NoteRepo) BatchUpdateFolder(ctx context.Context, userID uuid.UUID, noteIDs []uuid.UUID, folderID *uuid.UUID) error {
+func (r *NoteRepo) BatchUpdateFolder(ctx context.Context, noteIDs []string, folderID *uuid.UUID) error {
 	return r.db.WithContext(ctx).
 		Model(&models.Note{}).
-		Where("id IN ? AND user_id = ?", noteIDs, userID).
+		Where("id IN ?", noteIDs).
 		Update("folder_id", folderID).Error
 }
 
@@ -182,7 +192,7 @@ func (r *NoteRepo) AddTagsBatch(ctx context.Context, noteTags []interfaces.NoteT
 	values := make([]string, 0, len(noteTags))
 	args := make([]interface{}, 0, len(noteTags)*2)
 	for _, nt := range noteTags {
-		values = append(values, "(?, ?  )")
+		values = append(values, "(?, ?)")
 		args = append(args, nt.NoteID, nt.TagID)
 	}
 

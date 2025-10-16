@@ -1,13 +1,14 @@
 package service
 
 import (
-    "context"
-    "errors"
+	"context"
+	"errors"
+	apperrors "valibibe/internal/errors"
 
-    "github.com/google/uuid"
-    "valibibe/internal/controller/dto"
-    "valibibe/internal/models"
-    "valibibe/internal/repository/interfaces"
+	"github.com/google/uuid"
+	"valibibe/internal/controller/dto"
+	"valibibe/internal/models"
+	"valibibe/internal/repository/interfaces"
 )
 
 type TagService struct {
@@ -78,7 +79,7 @@ func (s *TagService) UpdateTag(ctx context.Context, userID, tagID string, input 
         return nil, err
     }
     if tag == nil {
-        return nil, errors.New("tag not found")
+        return nil, apperrors.ErrNotFound
     }
 
     // проверка дубля
@@ -107,5 +108,14 @@ func (s *TagService) DeleteTag(ctx context.Context, userID, tagID string) error 
     if err != nil {
         return errors.New("invalid tagID")
     }
+
+    tag, err := s.repo.GetByID(ctx, uid, tid)
+    if err != nil {
+        return err
+    }
+    if tag == nil {
+        return apperrors.ErrNotFound
+    }
+
     return s.repo.Delete(ctx, uid, tid)
 }

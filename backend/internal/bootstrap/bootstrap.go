@@ -27,7 +27,7 @@ func InitializeApp() (*gin.Engine, error) {
 	tokenService := service.NewTokenService()
 	authService := service.NewAuthService(userRepo, tokenService)
 	noteService := service.NewNoteService(noteRepo)
-	assignFolderService := service.NewAssignFolderService(noteRepo)
+	assignFolderService := service.NewAssignFolderService(noteRepo, folderRepo)
 	folderService := service.NewFolderService(folderRepo)
 	tagService := service.NewTagService(tagRepo)
 	noteTagService := service.NewNoteTagService(noteRepo, tagRepo)

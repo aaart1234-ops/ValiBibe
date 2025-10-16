@@ -2,7 +2,7 @@ package service
 
 import (
     "context"
-    "errors"
+	apperrors "valibibe/internal/errors"
     "fmt"
     "time"
 
@@ -48,7 +48,7 @@ func (s *NoteService) GetNoteByID(ctx context.Context, userID, noteID string) (*
         return nil, err
     }
     if note == nil {
-        return nil, errors.New("note not found or access denied")
+        return nil, apperrors.ErrNotFound
     }
     return note, nil
 }
@@ -63,7 +63,7 @@ func (s *NoteService) UpdateNote(ctx context.Context, userID, noteID string, inp
         return nil, err
     }
     if note == nil {
-        return nil, errors.New("note not found or access denied")
+        return nil, apperrors.ErrNotFound
     }
 
     note.Title = input.Title
@@ -83,7 +83,7 @@ func (s *NoteService) ArchiveNote(ctx context.Context, userID, noteID string) (*
         return nil, err
     }
     if note == nil {
-        return nil, errors.New("note not found or access denied")
+        return nil, apperrors.ErrNotFound
     }
 
     note.Archived = true
@@ -102,7 +102,7 @@ func (s *NoteService) UnArchiveNote(ctx context.Context, userID, noteID string) 
         return nil, err
     }
     if note == nil {
-        return nil, errors.New("note not found or access denied")
+        return nil, apperrors.ErrNotFound
     }
 
     note.Archived = false
@@ -121,7 +121,7 @@ func (s *NoteService) DeleteNote(ctx context.Context, userID, noteID string) err
         return err
     }
     if note == nil {
-        return errors.New("note not found or access denied")
+        return apperrors.ErrNotFound
     }
 
     return s.noteRepo.DeleteNote(ctx, noteID)
@@ -133,7 +133,7 @@ func (s *NoteService) UpdateMemoryLevel(ctx context.Context, userID, noteID stri
         return err
     }
     if note == nil {
-        return errors.New("note not found or access denied")
+        return apperrors.ErrNotFound
     }
 
     if !remembered {

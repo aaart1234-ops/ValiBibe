@@ -1,10 +1,12 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"valibibe/internal/controller/dto"
+	apperrors "valibibe/internal/errors"
 	"valibibe/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -62,6 +64,7 @@ func (c *NoteController) CreateNote(ctx *gin.Context) {
 // @Param id path string true "Note ID"
 // @Success 200 {object} models.Note
 // @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
 // @Router /notes/{id} [get]
 func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
@@ -69,7 +72,11 @@ func (c *NoteController) GetNoteByID(ctx *gin.Context) {
 
 	note, err := c.noteService.GetNoteByID(ctx, userID, id)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -143,6 +150,7 @@ func (c *NoteController) GetAllNotes(ctx *gin.Context) {
 // @Param note body dto.NoteInput true "Обновлённые данные заметки"
 // @Success 200 {object} models.Note
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id} [put]
 func (c *NoteController) UpdateNote(ctx *gin.Context) {
@@ -157,7 +165,11 @@ func (c *NoteController) UpdateNote(ctx *gin.Context) {
 
 	note, err := c.noteService.UpdateNote(ctx, userID, id, &input)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -171,6 +183,7 @@ func (c *NoteController) UpdateNote(ctx *gin.Context) {
 // @Produce json
 // @Param id path string true "Note ID"
 // @Success 200 {object} models.Note
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id}/archive [post]
 func (c *NoteController) ArchiveNote(ctx *gin.Context) {
@@ -179,7 +192,11 @@ func (c *NoteController) ArchiveNote(ctx *gin.Context) {
 
 	updatedNote, err := c.noteService.ArchiveNote(ctx, userID, id) // Теперь возвращает (*models.Note, error)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -193,6 +210,7 @@ func (c *NoteController) ArchiveNote(ctx *gin.Context) {
 // @Produce json
 // @Param id path string true "Note ID"
 // @Success 200 {object} models.Note
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id}/unarchive [post]
 func (c *NoteController) UnArchiveNote(ctx *gin.Context) {
@@ -201,7 +219,11 @@ func (c *NoteController) UnArchiveNote(ctx *gin.Context) {
 
 	updatedNote, err := c.noteService.UnArchiveNote(ctx, userID, id) // Теперь возвращает (*models.Note, error)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -215,6 +237,7 @@ func (c *NoteController) UnArchiveNote(ctx *gin.Context) {
 // @Produce json
 // @Param id path string true "Note ID"
 // @Success 200 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id} [delete]
 func (c *NoteController) DeleteNote(ctx *gin.Context) {
@@ -223,7 +246,11 @@ func (c *NoteController) DeleteNote(ctx *gin.Context) {
 
 	err := c.noteService.DeleteNote(ctx, userID, id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -240,6 +267,7 @@ func (c *NoteController) DeleteNote(ctx *gin.Context) {
 // @Param input body dto.ReviewInput true "Вспомнил или нет"
 // @Success 200 {object} models.Note
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /notes/{id}/review [post]
 func (c *NoteController) ReviewNoteHandler(ctx *gin.Context) {
@@ -254,13 +282,18 @@ func (c *NoteController) ReviewNoteHandler(ctx *gin.Context) {
 
 	err := c.noteService.UpdateMemoryLevel(ctx, userID, noteID, input.Remembered)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Получаем обновлённую заметку и возвращаем её
 	updatedNote, err := c.noteService.GetNoteByID(ctx, userID, noteID)
 	if err != nil {
+		// Эта ошибка не должна происходить, если предыдущий вызов был успешен
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch updated note"})
 		return
 	}
@@ -283,7 +316,9 @@ func (c *NoteController) AssignFolder(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 	noteID := ctx.Param("id")
 
-	var input dto.AssignFolderInput
+	var input struct {
+		FolderID string `json:"folder_id" binding:"required"`
+	}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -333,13 +368,20 @@ func (c *NoteController) RemoveFolder(ctx *gin.Context) {
 func (c *NoteController) BatchAssignFolder(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 
-	var input dto.BatchAssignFolderInput
+	var input struct {
+		NoteIDs  []string `json:"note_ids" binding:"required"`
+		FolderID *string  `json:"folder_id"` // nil to remove folder
+	}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := c.assignFolderService.BatchAssignFolder(ctx, userID, input.NoteIDs, input.FolderID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Folder or one of notes not found"})
+			return
+		}
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
