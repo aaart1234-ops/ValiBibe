@@ -36,10 +36,10 @@ func setupNoteControllerTestRouter(t *testing.T) *gin.Engine {
 
 	noteRepo := repository.NewNoteRepository(db)
 	noteService := service.NewNoteService(noteRepo)
-	assignFolderService := service.NewAssignFolderService(noteRepo)
+	folderRepo := repository.NewFolderRepo(db)
+	assignFolderService := service.NewAssignFolderService(noteRepo, folderRepo)
 	noteController := controller.NewNoteController(noteService, assignFolderService)
 
-	folderRepo := repository.NewFolderRepo(db)
 	folderService := service.NewFolderService(folderRepo)
 	folderController := controller.NewFolderController(folderService)
 	tagRepo := repository.NewTagRepository(db)

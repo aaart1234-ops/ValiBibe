@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	apperrors "valibibe/internal/errors"
 
 	"valibibe/internal/controller/dto"
 	"valibibe/internal/models"
@@ -31,6 +32,15 @@ func (s *FolderService) CreateFolder(ctx context.Context, userID string, input d
 		pid, err := uuid.Parse(*input.ParentID)
 		if err != nil {
 			return nil, errors.New("invalid parentID")
+		}
+
+		// Security check: убедиться, что родительская папка принадлежит пользователю
+		parentFolder, err := s.repo.GetByID(ctx, userID, *input.ParentID)
+		if err != nil {
+			return nil, err // DB error
+		}
+		if parentFolder == nil {
+			return nil, apperrors.ErrNotFound // Parent folder not found or access denied
 		}
 		parentID = &pid
 	}
@@ -64,7 +74,7 @@ func (s *FolderService) UpdateFolder(ctx context.Context, userID, folderID strin
 		return nil, err
 	}
 	if folder == nil {
-		return nil, errors.New("folder not found")
+		return nil, apperrors.ErrNotFound
 	}
 
 	if input.Name != nil {
@@ -72,11 +82,23 @@ func (s *FolderService) UpdateFolder(ctx context.Context, userID, folderID strin
 	}
 
 	if input.ParentID != nil {
-		pid, err := uuid.Parse(*input.ParentID)
-		if err != nil {
-			return nil, errors.New("invalid parentID")
+		if *input.ParentID == "" { // Unset parent
+			folder.ParentID = nil
+		} else {
+			pid, err := uuid.Parse(*input.ParentID)
+			if err != nil {
+				return nil, errors.New("invalid parentID")
+			}
+			// Security check: убедиться, что новая родительская папка принадлежит пользователю
+			parentFolder, err := s.repo.GetByID(ctx, userID, *input.ParentID)
+			if err != nil {
+				return nil, err // DB error
+			}
+			if parentFolder == nil {
+				return nil, apperrors.ErrNotFound // Parent folder not found or access denied
+			}
+			folder.ParentID = &pid
 		}
-		folder.ParentID = &pid
 	}
 
 	if err := s.repo.Update(ctx, folder); err != nil {
@@ -88,6 +110,13 @@ func (s *FolderService) UpdateFolder(ctx context.Context, userID, folderID strin
 
 // Delete folder (cascade notes + children via DB constraints)
 func (s *FolderService) DeleteFolder(ctx context.Context, userID, folderID string) error {
+	folder, err := s.repo.GetByID(ctx, userID, folderID)
+	if err != nil {
+		return err
+	}
+	if folder == nil {
+		return apperrors.ErrNotFound
+	}
 	return s.repo.Delete(ctx, userID, folderID)
 }
 

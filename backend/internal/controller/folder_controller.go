@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"valibibe/internal/controller/dto"
+	apperrors "valibibe/internal/errors"
 	"valibibe/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +28,7 @@ func NewFolderController(folderService *service.FolderService) *FolderController
 // @Param folder body dto.FolderCreateInput true "Данные папки"
 // @Success 201 {object} models.Folder
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /folders [post]
 func (c *FolderController) CreateFolder(ctx *gin.Context) {
@@ -39,7 +42,11 @@ func (c *FolderController) CreateFolder(ctx *gin.Context) {
 
 	folder, err := c.folderService.CreateFolder(ctx, userID, input)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Parent folder not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -91,11 +98,11 @@ func (c *FolderController) UpdateFolder(ctx *gin.Context) {
 
 	folder, err := c.folderService.UpdateFolder(ctx, userID, id, input)
 	if err != nil {
-		if err.Error() == "folder not found" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "folder not found"})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Folder or parent folder not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -108,6 +115,7 @@ func (c *FolderController) UpdateFolder(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param id path string true "Folder ID"
 // @Success 204 {string} string "No Content"
+// @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /folders/{id} [delete]
 func (c *FolderController) DeleteFolder(ctx *gin.Context) {
@@ -115,7 +123,11 @@ func (c *FolderController) DeleteFolder(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	if err := c.folderService.DeleteFolder(ctx, userID, id); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Folder not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
