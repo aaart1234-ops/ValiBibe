@@ -7,3 +7,8 @@ type TagCreateInput struct {
 type TagUpdateInput struct {
     Name string `json:"name" binding:"required"`
 }
+
+type NoteTagInput struct {
+	NoteID string `json:"note_id" binding:"required"`
+	TagID  string `json:"tag_id" binding:"required"`
+}

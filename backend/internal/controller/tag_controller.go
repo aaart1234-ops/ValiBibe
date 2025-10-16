@@ -1,12 +1,13 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"valibibe/internal/controller/dto"
+	apperrors "valibibe/internal/errors"
 	"valibibe/internal/service"
 )
 
@@ -27,6 +28,7 @@ func NewTagController(tagService *service.TagService) *TagController {
 // @Param        body  body      dto.TagCreateInput  true  "Данные тега"
 // @Success      201   {object}  models.Tag
 // @Failure      400   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
 // @Router       /tags [post]
 func (tc *TagController) CreateTag(ctx *gin.Context) {
@@ -40,39 +42,15 @@ func (tc *TagController) CreateTag(ctx *gin.Context) {
 
 	tag, err := tc.tagService.CreateTag(ctx, userID, input)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if err.Error() == "tag with this name already exists" {
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	ctx.JSON(http.StatusCreated, tag)
-}
-
-// GetTag godoc
-// @Summary      Получить тег
-// @Description  Получает тег по ID (если принадлежит пользователю)
-// @Tags         tags
-// @Produce      json
-// @Param        id   path      string  true  "ID тега"
-// @Success      200  {object}  models.Tag
-// @Failure      400  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Router       /tags/{id} [get]
-func (tc *TagController) GetTag(ctx *gin.Context) {
-	userID := ctx.MustGet("user_id").(string)
-	tagID := ctx.Param("id")
-
-	tag, err := tc.tagService.GetTag(ctx, userID, tagID)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if tag == nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "tag not found"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, tag)
 }
 
 // ListTags godoc
@@ -106,6 +84,7 @@ func (tc *TagController) ListTags(ctx *gin.Context) {
 // @Success      200   {object}  models.Tag
 // @Failure      400   {object}  map[string]string
 // @Failure      404   {object}  map[string]string
+// @Failure      409   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
 // @Router       /tags/{id} [put]
 func (tc *TagController) UpdateTag(ctx *gin.Context) {
@@ -120,14 +99,15 @@ func (tc *TagController) UpdateTag(ctx *gin.Context) {
 
 	tag, err := tc.tagService.UpdateTag(ctx, userID, tagID, input)
 	if err != nil {
-		switch err.Error() {
-		case "invalid userID", "invalid tagID":
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case "tag not found":
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		default:
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
+			return
 		}
+		if err.Error() == "tag with this name already exists" {
+			ctx.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -149,22 +129,12 @@ func (tc *TagController) DeleteTag(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 	tagID := ctx.Param("id")
 
-	if _, err := uuid.Parse(userID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid userID"})
-		return
-	}
-	if _, err := uuid.Parse(tagID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid tagID"})
-		return
-	}
-
 	if err := tc.tagService.DeleteTag(ctx, userID, tagID); err != nil {
-		switch err.Error() {
-		case "tag not found or not owned by user":
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		default:
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
+			return
 		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 

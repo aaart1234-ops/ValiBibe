@@ -1,8 +1,10 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
-
+	"valibibe/internal/controller/dto"
+	apperrors "valibibe/internal/errors"
 	"valibibe/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +38,10 @@ func (c *NoteTagController) AddTag(ctx *gin.Context) {
 	tagID := ctx.Param("tagId")
 
 	if err := c.noteTagService.AddTag(ctx, userID, noteID, tagID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note or tag not found"})
+			return
+		}
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,6 +66,10 @@ func (c *NoteTagController) RemoveTag(ctx *gin.Context) {
 	tagID := ctx.Param("tagId")
 
 	if err := c.noteTagService.RemoveTag(ctx, userID, noteID, tagID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Note or tag not found"})
+			return
+		}
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -73,36 +83,25 @@ func (c *NoteTagController) RemoveTag(ctx *gin.Context) {
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param input body []object true "Массив связей заметка-тег"
+// @Param input body []dto.NoteTagInput true "Массив связей заметка-тег"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
 // @Router /notes/tags/batch [post]
 func (c *NoteTagController) AddTagsBatch(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 
-	var input []struct {
-		NoteID string `json:"note_id" binding:"required"`
-		TagID  string `json:"tag_id" binding:"required"`
-	}
-
+	var input []dto.NoteTagInput
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Конвертируем в нужный тип
-	convertedInput := make([]struct {
-		NoteID string
-		TagID  string
-	}, len(input))
-	for i, item := range input {
-		convertedInput[i] = struct {
-			NoteID string
-			TagID  string
-		}{NoteID: item.NoteID, TagID: item.TagID}
-	}
-
-	if err := c.noteTagService.AddTagsBatch(ctx, userID, convertedInput); err != nil {
+	if err := c.noteTagService.AddTagsBatch(ctx, userID, input); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "One or more notes/tags not found"})
+			return
+		}
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

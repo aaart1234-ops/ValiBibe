@@ -69,13 +69,18 @@ func (m *MockNoteRepo) GetNoteByID(ctx context.Context, userID, noteID uuid.UUID
 	return note, args.Error(1)
 }
 
-func (m *MockNoteRepo) UpdateFolder(ctx context.Context, userID, noteID uuid.UUID, folderID *uuid.UUID) error {
-	args := m.Called(ctx, userID, noteID, folderID)
+func (m *MockNoteRepo) CountNotesByIDsAndUserID(ctx context.Context, noteIDs []string, userID string) (int, error) {
+	args := m.Called(ctx, noteIDs, userID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockNoteRepo) UpdateFolder(ctx context.Context, noteID uuid.UUID, folderID *uuid.UUID) error {
+	args := m.Called(ctx, noteID, folderID)
 	return args.Error(0)
 }
 
-func (m *MockNoteRepo) BatchUpdateFolder(ctx context.Context, userID uuid.UUID, noteIDs []uuid.UUID, folderID *uuid.UUID) error {
-	args := m.Called(ctx, userID, noteIDs, folderID)
+func (m *MockNoteRepo) BatchUpdateFolder(ctx context.Context, noteIDs []string, folderID *uuid.UUID) error {
+	args := m.Called(ctx, noteIDs, folderID)
 	return args.Error(0)
 }
 

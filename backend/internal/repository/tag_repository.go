@@ -82,6 +82,15 @@ func (r *tagRepository) ExistsByName(ctx context.Context, userID uuid.UUID, name
     return count > 0, err
 }
 
+func (r *tagRepository) CountTagsByIDsAndUserID(ctx context.Context, tagIDs []string, userID string) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Tag{}).
+		Where("id IN ? AND user_id = ?", tagIDs, userID).
+		Count(&count).Error
+	return int(count), err
+}
+
 // ------------------- связи тегов и заметок -------------------
 
 func (r *tagRepository) AttachToNote(ctx context.Context, noteID, tagID uuid.UUID) error {

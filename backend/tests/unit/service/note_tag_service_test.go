@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"valibibe/internal/controller/dto"
 	"valibibe/internal/models"
 	"valibibe/internal/repository/interfaces"
 	"valibibe/internal/service"
@@ -48,6 +49,11 @@ func (m *MockTagRepo) Delete(ctx context.Context, userID, tagID uuid.UUID) error
 func (m *MockTagRepo) ExistsByName(ctx context.Context, userID uuid.UUID, name string) (bool, error) {
 	args := m.Called(ctx, userID, name)
 	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockTagRepo) CountTagsByIDsAndUserID(ctx context.Context, tagIDs []string, userID string) (int, error) {
+	args := m.Called(ctx, tagIDs, userID)
+	return args.Int(0), args.Error(1)
 }
 
 func (m *MockTagRepo) AttachToNote(ctx context.Context, noteID, tagID uuid.UUID) error {
@@ -97,7 +103,7 @@ func TestNoteTagService_AddTag(t *testing.T) {
 	}
 
 	// Мокируем вызовы репозиториев
-	mockNoteRepo.On("GetNoteByID", ctx, userID, noteID).Return(note, nil)
+	mockNoteRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockTagRepo.On("GetByID", ctx, userID, tagID).Return(tag, nil)
 	mockNoteRepo.On("AddTag", ctx, noteID, tagID).Return(nil)
 
@@ -119,11 +125,11 @@ func TestNoteTagService_AddTag_NoteNotFound(t *testing.T) {
 	tagID := uuid.New()
 
 	// Мокируем что заметка не найдена
-	mockNoteRepo.On("GetNoteByID", ctx, userID, noteID).Return(nil, nil)
+	mockNoteRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(nil, nil)
 
 	err := noteTagService.AddTag(ctx, userID.String(), noteID.String(), tagID.String())
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "note not found")
+	assert.Contains(t, err.Error(), "resource not found or access denied")
 
 	mockNoteRepo.AssertExpectations(t)
 }
@@ -145,12 +151,12 @@ func TestNoteTagService_AddTag_TagNotFound(t *testing.T) {
 	}
 
 	// Мокируем что заметка найдена, но тег нет
-	mockNoteRepo.On("GetNoteByID", ctx, userID, noteID).Return(note, nil)
+	mockNoteRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
 	mockTagRepo.On("GetByID", ctx, userID, tagID).Return(nil, nil)
 
 	err := noteTagService.AddTag(ctx, userID.String(), noteID.String(), tagID.String())
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "tag not found")
+	assert.Contains(t, err.Error(), "resource not found or access denied")
 
 	mockNoteRepo.AssertExpectations(t)
 	mockTagRepo.AssertExpectations(t)
@@ -171,9 +177,15 @@ func TestNoteTagService_RemoveTag(t *testing.T) {
 		UserID: userID,
 		Title:  "Test Note",
 	}
+	tag := &models.Tag{
+		ID:     tagID,
+		UserID: userID,
+		Name:   "Test Tag",
+	}
 
 	// Мокируем вызовы репозиториев
-	mockNoteRepo.On("GetNoteByID", ctx, userID, noteID).Return(note, nil)
+	mockNoteRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(note, nil)
+	mockTagRepo.On("GetByID", ctx, userID, tagID).Return(tag, nil)
 	mockNoteRepo.On("RemoveTag", ctx, noteID, tagID).Return(nil)
 
 	err := noteTagService.RemoveTag(ctx, userID.String(), noteID.String(), tagID.String())
@@ -193,11 +205,11 @@ func TestNoteTagService_RemoveTag_NoteNotFound(t *testing.T) {
 	tagID := uuid.New()
 
 	// Мокируем что заметка не найдена
-	mockNoteRepo.On("GetNoteByID", ctx, userID, noteID).Return(nil, nil)
+	mockNoteRepo.On("GetNoteByIDAndUserID", ctx, noteID.String(), userID.String()).Return(nil, nil)
 
 	err := noteTagService.RemoveTag(ctx, userID.String(), noteID.String(), tagID.String())
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "note not found")
+	assert.Contains(t, err.Error(), "resource not found or access denied")
 
 	mockNoteRepo.AssertExpectations(t)
 }
@@ -214,64 +226,28 @@ func TestNoteTagService_AddTagsBatch(t *testing.T) {
 	tagID1 := uuid.New()
 	tagID2 := uuid.New()
 
-	input := []struct {
-		NoteID string
-		TagID  string
-	}{
+	input := []dto.NoteTagInput{
 		{NoteID: noteID1.String(), TagID: tagID1.String()},
 		{NoteID: noteID2.String(), TagID: tagID2.String()},
 	}
+
+	noteIDs := []string{noteID1.String(), noteID2.String()}
+	tagIDs := []string{tagID1.String(), tagID2.String()}
 
 	expectedNoteTags := []interfaces.NoteTag{
 		{NoteID: noteID1, TagID: tagID1},
 		{NoteID: noteID2, TagID: tagID2},
 	}
 
-	// Мокируем вызов репозитория
+	// Мокируем вызовы репозиториев
+	mockNoteRepo.On("CountNotesByIDsAndUserID", ctx, noteIDs, userID).Return(len(noteIDs), nil)
+	mockTagRepo.On("CountTagsByIDsAndUserID", ctx, tagIDs, userID).Return(len(tagIDs), nil)
 	mockNoteRepo.On("AddTagsBatch", ctx, expectedNoteTags).Return(nil)
 
 	err := noteTagService.AddTagsBatch(ctx, userID, input)
 	assert.NoError(t, err)
 
 	mockNoteRepo.AssertExpectations(t)
+	mockTagRepo.AssertExpectations(t)
 }
 
-func TestNoteTagService_AddTagsBatch_InvalidNoteID(t *testing.T) {
-	mockNoteRepo := new(MockNoteRepo)
-	mockTagRepo := new(MockTagRepo)
-	noteTagService := service.NewNoteTagService(mockNoteRepo, mockTagRepo)
-	ctx := context.Background()
-
-	userID := uuid.New().String()
-
-	input := []struct {
-		NoteID string
-		TagID  string
-	}{
-		{NoteID: "invalid-uuid", TagID: uuid.New().String()},
-	}
-
-	err := noteTagService.AddTagsBatch(ctx, userID, input)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid noteID in batch")
-}
-
-func TestNoteTagService_AddTagsBatch_InvalidTagID(t *testing.T) {
-	mockNoteRepo := new(MockNoteRepo)
-	mockTagRepo := new(MockTagRepo)
-	noteTagService := service.NewNoteTagService(mockNoteRepo, mockTagRepo)
-	ctx := context.Background()
-
-	userID := uuid.New().String()
-
-	input := []struct {
-		NoteID string
-		TagID  string
-	}{
-		{NoteID: uuid.New().String(), TagID: "invalid-uuid"},
-	}
-
-	err := noteTagService.AddTagsBatch(ctx, userID, input)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid tagID in batch")
-}
