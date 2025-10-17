@@ -110,6 +110,7 @@ func SetupRoutes(r *gin.Engine,
 	{
 		tags.POST("", tagController.CreateTag)
 		tags.GET("", tagController.ListTags)
+		tags.GET("/:id", tagController.GetTag)
 		tags.PUT("/:id", tagController.UpdateTag)
 		tags.DELETE("/:id", tagController.DeleteTag)
 	}

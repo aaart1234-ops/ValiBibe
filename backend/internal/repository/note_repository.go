@@ -143,6 +143,7 @@ func (r *NoteRepo) DeleteNote(ctx context.Context, id string) error {
 		Delete(&models.Note{}).Error
 }
 
+
 func (r *NoteRepo) CountNotesByIDsAndUserID(ctx context.Context, noteIDs []string, userID string) (int, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
@@ -191,7 +192,7 @@ func (r *NoteRepo) AddTagsBatch(ctx context.Context, noteTags []interfaces.NoteT
 	values := make([]string, 0, len(noteTags))
 	args := make([]interface{}, 0, len(noteTags)*2)
 	for _, nt := range noteTags {
-		values = append(values, "(?, ?  )")
+		values = append(values, "(?, ?)")
 		args = append(args, nt.NoteID, nt.TagID)
 	}
 

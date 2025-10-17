@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	apperrors "valibibe/internal/errors"
 
 	"github.com/google/uuid"
@@ -64,12 +63,7 @@ func (s *AssignFolderService) RemoveFolder(ctx context.Context, userID, noteID, 
 		return apperrors.ErrNotFound // Folder not found or access denied
 	}
 
-	// 3. Проверить, что заметка действительно в этой папке
-	if note.FolderID == nil || note.FolderID.String() != folderID {
-		return errors.New("note is not in this folder")
-	}
-
-	// 4. Убрать папку
+	// 3. Убрать папку
 	return s.noteRepo.UpdateFolder(ctx, note.ID, nil)
 }
 

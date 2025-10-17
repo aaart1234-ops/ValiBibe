@@ -53,6 +53,34 @@ func (tc *TagController) CreateTag(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, tag)
 }
 
+// GetTag godoc
+// @Summary      Получить тег
+// @Description  Получает тег по ID (если принадлежит пользователю)
+// @Tags         tags
+// @Security BearerAuth
+// @Produce      json
+// @Param        id   path      string  true  "ID тега"
+// @Success      200  {object}  models.Tag
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tags/{id} [get]
+func (tc *TagController) GetTag(ctx *gin.Context) {
+	userID := ctx.MustGet("user_id").(string)
+	tagID := ctx.Param("id")
+
+	tag, err := tc.tagService.GetTag(ctx, userID, tagID)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, tag)
+}
+
 // ListTags godoc
 // @Summary      Список тегов
 // @Description  Получает список всех тегов пользователя

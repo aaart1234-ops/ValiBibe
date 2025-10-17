@@ -31,6 +31,12 @@ func (m *MockNoteRepo) GetNoteByIDAndUserID(ctx context.Context, noteID string, 
 	return note, args.Error(1)
 }
 
+func (m *MockNoteRepo) GetNotesByIDsAndUserID(ctx context.Context, noteIDs []string, userID string) ([]models.Note, error) {
+	args := m.Called(ctx, noteIDs, userID)
+	notes, _ := args.Get(0).([]models.Note)
+	return notes, args.Error(1)
+}
+
 func (m *MockNoteRepo) GetAllNotesByUserID(ctx context.Context, filter *dto.NoteFilter) (*dto.PaginatedNotes, error) {
 	args := m.Called(ctx, filter)
 

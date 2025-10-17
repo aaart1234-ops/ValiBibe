@@ -316,7 +316,9 @@ func (c *NoteController) AssignFolder(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 	noteID := ctx.Param("id")
 
-	var input dto.AssignFolderInput
+	var input struct {
+		FolderID string `json:"folder_id" binding:"required"`
+	}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -366,13 +368,20 @@ func (c *NoteController) RemoveFolder(ctx *gin.Context) {
 func (c *NoteController) BatchAssignFolder(ctx *gin.Context) {
 	userID := ctx.MustGet("user_id").(string)
 
-	var input dto.BatchAssignFolderInput
+	var input struct {
+		NoteIDs  []string `json:"note_ids" binding:"required"`
+		FolderID *string  `json:"folder_id"` // nil to remove folder
+	}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := c.assignFolderService.BatchAssignFolder(ctx, userID, input.NoteIDs, input.FolderID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Folder or one of notes not found"})
+			return
+		}
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
