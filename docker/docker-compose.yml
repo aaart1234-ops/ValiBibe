@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: spaced_repetition_db
+    restart: always
+    env_file:
+      - ../.env  # Указываем путь к .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ../  # Поднялись выше на 2 уровня, так как docker-compose лежит в app/docker/
+      dockerfile: backend/Dockerfile
+    container_name: spaced_repetition_backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    env_file:
+      - ../.env  # Указываем путь к .env
+    environment:
+      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@postgres:${DB_PORT}/${DB_NAME}?sslmode=disable"
+      JWT_SECRET: ${JWT_SECRET}
+
+volumes:
+  postgres_data:

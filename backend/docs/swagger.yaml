@@ -68,6 +68,16 @@ definitions:
     - content
     - title
     type: object
+  dto.NoteTagInput:
+    properties:
+      note_id:
+        type: string
+      tag_id:
+        type: string
+    required:
+    - note_id
+    - tag_id
+    type: object
   dto.PaginatedNotes:
     properties:
       notes:
@@ -385,6 +395,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -409,6 +425,12 @@ paths:
           description: No Content
           schema:
             type: string
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -605,6 +627,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -632,6 +660,12 @@ paths:
             $ref: '#/definitions/models.Note'
         "404":
           description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
           schema:
             additionalProperties:
               type: string
@@ -669,6 +703,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -695,6 +735,12 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.Note'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -797,6 +843,12 @@ paths:
             $ref: '#/definitions/models.Note'
         "400":
           description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
           schema:
             additionalProperties:
               type: string
@@ -906,6 +958,12 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/models.Note'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -956,7 +1014,7 @@ paths:
         required: true
         schema:
           items:
-            type: object
+            $ref: '#/definitions/dto.NoteTagInput'
           type: array
       produces:
       - application/json
@@ -967,6 +1025,12 @@ paths:
             type: string
         "400":
           description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
           schema:
             additionalProperties:
               type: string
@@ -1058,6 +1122,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -1102,42 +1172,6 @@ paths:
       summary: Удалить тег
       tags:
       - tags
-    get:
-      description: Получает тег по ID (если принадлежит пользователю)
-      parameters:
-      - description: ID тега
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Tag'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получить тег
-      tags:
-      - tags
     put:
       consumes:
       - application/json
@@ -1169,6 +1203,12 @@ paths:
             type: object
         "404":
           description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
           schema:
             additionalProperties:
               type: string
